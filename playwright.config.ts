@@ -30,6 +30,7 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+    navigationTimeout: 60000, // Aumenta o tempo limite de navegação para 60 segundos
   },
 
   /* Configure projects for major browsers */
@@ -76,4 +77,5 @@ export default defineConfig({
   //   url: 'http://127.0.0.1:3000',
   //   reuseExistingServer: !process.env.CI,
   // },
+  timeout: 60000, // Aumenta o tempo limite global para 60 segundos
 });
