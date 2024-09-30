@@ -8,6 +8,8 @@ import { scraperJobInhireHandler } from './src/routes/job-scraper-inhire';
 import { jobInhireHandler } from './src/routes/job-inhire';
 import { scraperJobGreenhouse } from './src/routes/job-scraper-greenhouse';
 import { jobGreenhouseHandler } from './src/routes/job-greenhouse';
+import { scraperJobWorkableHandler } from './src/routes/job-scraper-workable';
+import { jobWorkableHandler } from './src/routes/job-workable';
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -80,55 +82,9 @@ const swaggerDocument = {
         }
       }
     },
-    '/job-gupy': {
+    '/job-workable': {
       post: {
-        summary: 'Coletar informações detalhadas de uma vaga específica do Gupy',
-        parameters: [
-          {
-            in: 'query',
-            name: 'url',
-            required: true,
-            schema: {
-              type: 'string'
-            },
-            description: 'URL da vaga específica no Gupy'
-          }
-        ],
-        responses: {
-          '200': {
-            description: 'Informações detalhadas da vaga coletadas com sucesso',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    type_job: { type: 'string' },
-                    work_model: { type: 'string' },
-                    pcd: { type: 'string' },
-                    pub_job: { type: 'string' },
-                    deadline: { type: 'string' },
-                    description_job: { type: 'string' },
-                    requirements: { type: 'string' },
-                    infos_extras: { type: 'string' },
-                    etapas: { type: 'string' },
-                    about: { type: 'string' }
-                  }
-                }
-              }
-            }
-          },
-          '400': {
-            description: 'URL não fornecida'
-          },
-          '500': {
-            description: 'Erro ao coletar informações da vaga'
-          }
-        }
-      }
-    },
-    '/scraper-job-inhire': {
-      post: {
-        summary: 'Coletar informações de vagas do InHire',
+        summary: 'Buscar informações de uma vaga do Workable',
         requestBody: {
           required: true,
           content: {
@@ -138,7 +94,58 @@ const swaggerDocument = {
                 properties: {
                   url: {
                     type: 'string',
-                    description: 'URL do InHire Job Board'
+                    example: 'https://apply.workable.com/nomadglobal/j/70CC69D082/',
+                    description: 'URL da vaga no Workable'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações da vaga coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    work_model: { type: 'string' },
+                    type_job: { type: 'string' },
+                    location: { type: 'string' },
+                    description: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '404': {
+            description: 'Não foi possível encontrar informações da vaga'
+          },
+          '500': {
+            description: 'Erro ao coletar informações da vaga'
+          }
+        }
+      }
+    },
+    '/scraper-job-inhire': {
+      post: {
+        summary: 'Coletar informações de vagas do Inhire',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL do Inhire Job Board'
                   }
                 },
                 required: ['url']
@@ -183,7 +190,7 @@ const swaggerDocument = {
     },
     '/job-inhire': {
       post: {
-        summary: 'Coletar informações detalhadas de uma vaga específica do InHire',
+        summary: 'Buscar informações de uma vaga do Inhire',
         requestBody: {
           required: true,
           content: {
@@ -193,7 +200,7 @@ const swaggerDocument = {
                 properties: {
                   url: {
                     type: 'string',
-                    description: 'URL da vaga específica no InHire'
+                    description: 'URL da vaga no Inhire'
                   }
                 },
                 required: ['url']
@@ -203,7 +210,7 @@ const swaggerDocument = {
         },
         responses: {
           '200': {
-            description: 'Informações detalhadas da vaga coletadas com sucesso',
+            description: 'Informações da vaga coletadas com sucesso',
             content: {
               'application/json': {
                 schema: {
@@ -220,6 +227,9 @@ const swaggerDocument = {
           },
           '400': {
             description: 'URL não fornecida'
+          },
+          '404': {
+            description: 'Não foi possível encontrar informações da vaga'
           },
           '500': {
             description: 'Erro ao coletar informações da vaga'
@@ -283,6 +293,113 @@ const swaggerDocument = {
           }
         }
       }
+    },
+    '/job-greenhouse': {
+      post: {
+        summary: 'Buscar informações de uma vaga do Greenhouse',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL da vaga no Greenhouse'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações da vaga coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    location: { type: 'string' },
+                    description: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '404': {
+            description: 'Não foi possível encontrar informações da vaga'
+          },
+          '500': {
+            description: 'Erro ao coletar informações da vaga'
+          }
+        }
+      }
+    },
+    '/scraper-job-workable': {
+      post: {
+        summary: 'Coletar informações de vagas do Workable',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL do Workable Job Board'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações das vagas coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalVagas: {
+                      type: 'integer'
+                    },
+                    vagas: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          title: { type: 'string' },
+                          pub_date: { type: 'string' },
+                          work_model: { type: 'string' },
+                          location: { type: 'string' },
+                          type_job: { type: 'string' },
+                          url_job: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '500': {
+            description: 'Erro ao coletar informações das vagas'
+          }
+        }
+      }
     }
   }
 };
@@ -296,6 +413,8 @@ app.post('/scraper-job-inhire', scraperJobInhireHandler);
 app.post('/job-inhire', (req, res, next) => jobInhireHandler(req, res, next));
 app.post('/scraper-job-greenhouse', (req, res, next) => scraperJobGreenhouse(req, res, next));
 app.post('/job-greenhouse', jobGreenhouseHandler);
+app.post('/scraper-job-workable', (req, res, next) => scraperJobWorkableHandler(req, res, next));
+app.post('/job-workable', (req, res, next) => jobWorkableHandler(req, res, next));
 
 const server = app.listen(port, () => {
   console.log(`API rodando em http://localhost:${port}`);
