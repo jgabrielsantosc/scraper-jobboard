@@ -14,6 +14,8 @@ import { scraperJobQuickinHandler } from './src/routes/job-scraper-quickin';
 import { jobQuickinHandler } from './src/routes/job-quickin';
 import { scraperJobLeverHandler } from './src/routes/job-scraper-lever';
 import { jobLeverHandler } from './src/routes/job-lever';
+import { scraperJobAblerHandler } from './src/routes/job-scraper-abler';
+import { jobAblerHandler } from './src/routes/job-abler';
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -658,6 +660,116 @@ const swaggerDocument = {
           }
         }
       }
+    },
+    '/scraper-job-abler': {
+      post: {
+        summary: 'Coletar informações de vagas do Abler',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL do Abler Job Board'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações das vagas coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalVagas: {
+                      type: 'integer'
+                    },
+                    vagas: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          title: { type: 'string' },
+                          url: { type: 'string' },
+                          pub_date: { type: 'string' },
+                          seniority: { type: 'string' },
+                          contract_model: { type: 'string' },
+                          location: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '500': {
+            description: 'Erro ao coletar informações das vagas'
+          }
+        }
+      }
+    },
+    '/job-abler': {
+      post: {
+        summary: 'Buscar informações detalhadas de uma vaga do Abler',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL da vaga específica do Abler'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações detalhadas da vaga coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    location: { type: 'string' },
+                    contractModel: { type: 'string' },
+                    description: { type: 'string' },
+                    requirements: { type: 'string' },
+                    benefits: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '404': {
+            description: 'Não foi possível encontrar informações da vaga'
+          },
+          '500': {
+            description: 'Erro ao coletar informações da vaga'
+          }
+        }
+      }
     }
   }
 };
@@ -677,6 +789,8 @@ app.post('/scraper-job-quickin', (req, res, next) => scraperJobQuickinHandler(re
 app.post('/job-quickin', (req, res, next) => jobQuickinHandler(req, res, next));
 app.post('/scraper-job-lever', (req, res, next) => scraperJobLeverHandler(req, res, next));
 app.post('/job-lever', (req, res, next) => jobLeverHandler(req, res, next));
+app.post('/scraper-job-abler', (req, res, next) => scraperJobAblerHandler(req, res, next));
+app.post('/job-abler', (req, res, next) => jobAblerHandler(req, res, next));
 
 const server = app.listen(port, () => {
   console.log(`API rodando em http://localhost:${port}`);
