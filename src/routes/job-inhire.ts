@@ -34,36 +34,33 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
     const title = await page.locator('h1[data-component-name="Jumbo"]').textContent();
     const workModel = await page.locator('span[data-component-name="Text"]').first().textContent();
     const location = await page.locator('span[data-component-name="Text"]').nth(1).textContent();
-    const description = await page.locator('.css-i3pbo.e5r6srz1').textContent();
+    const descricao = await page.locator('.css-i3pbo.e5r6srz1').first().textContent();
 
     console.log('Título:', title);
     console.log('Modelo de Trabalho:', workModel);
     console.log('Localização:', location);
-    console.log('Descrição:', description);
+    console.log('Descrição:', descricao);
 
     // Verificar se as informações foram coletadas
-    if (!title && !workModel && !location && !description) {
+    if (!title && !workModel && !location && !descricao) {
       res.status(404).json({ error: 'Não foi possível encontrar informações da vaga' });
     } else {
       const jobInfo = {
         title: title ? title.trim() : '',
         workModel: workModel ? workModel.trim() : '',
         location: location ? location.trim() : '',
-        description: description ? description.trim() : '',
+        description: descricao ? descricao.trim() : '',
       };
       res.json(jobInfo);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao coletar informações da vaga:', error);
-
     if (error instanceof Error) {
-      console.error('Detalhes do erro:', error.message);
-      console.error('Stack trace:', error.stack);
+      res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: error.message });
     } else {
-      console.error('Erro desconhecido:', error);
+      res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: 'Erro desconhecido' });
     }
-
-    res.status(500).json({ error: 'Erro ao coletar informações da vaga' });
+    return;
   } finally {
     if (browser) {
       await browser.close();

@@ -40,7 +40,7 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
           url_job: linkElement ? `${baseUrl}${linkElement.getAttribute('href')}` : '',
         };
       });
-    });
+    }, url); // Passando a URL base como segundo argumento
 
     console.log(JSON.stringify(vagas, null, 2));
     console.log(`Total de vagas encontradas: ${vagas.length}`);
