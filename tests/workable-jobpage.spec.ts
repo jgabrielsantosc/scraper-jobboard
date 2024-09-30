@@ -1,36 +1,25 @@
-import { test, expect } from '@playwright/test';
-import { convert } from 'html-to-text';
+import { test, expect, chromium } from '@playwright/test';
+import fs from 'fs/promises';
 
-test('buscar informações da vaga do Workable', async ({ page }) => {
-  const url = 'https://apply.workable.com/nomadglobal/j/70CC69D082/';
-  await page.goto(url);
-  await page.waitForLoadState('networkidle');
+const jobListings = [
+  { company: 'quintoandar', url: 'https://apply.workable.com/quintoandar/j/5E4F3A7906/' },
+  { company: 'pravaler', url: 'https://apply.workable.com/pravaler-1/j/42357AC575/' },
+  { company: 'loggi', url: 'https://apply.workable.com/loggi/j/6291C81C5E/' },
+  { company: 'axur', url: 'https://apply.workable.com/axur/j/DEDB8E1006/' },
+  { company: 'nomadglobal', url: 'https://apply.workable.com/nomadglobal/j/70CC69D082/' },
+];
 
-  const title = await page.locator('h1[data-ui="job-title"]').textContent();
-  const workModel = await page.locator('span[data-ui="job-workplace"] strong').textContent();
-  const typeJob = await page.locator('span[data-ui="job-type"]').textContent();
-  const locationElements = await page.locator('div[data-ui="job-location-tooltip"] span').allTextContents();
-  const location = locationElements.join(' ').trim();
-  const descriptionHtml = await page.locator('section[data-ui="job-description"]').innerHTML();
-  const description = convert(descriptionHtml, {
-    wordwrap: false,
-    selectors: [
-      { selector: 'a', options: { ignoreHref: true } },
-      { selector: 'img', format: 'skip' }
-    ]
+jobListings.forEach(({ company, url }) => {
+  test(`extrair conteúdo bruto da vaga ${company}`, async ({ page }) => {
+    await page.goto(url);
+    await page.waitForLoadState('networkidle');
+
+    // Extrair o conteúdo HTML da página
+    const content = await page.content();
+
+    // Salvar o conteúdo bruto em um arquivo HTML
+    await fs.writeFile(`vaga_${company}.html`, content);
+
+    console.log(`Conteúdo bruto da vaga ${company} salvo em vaga_${company}.html`);
   });
-
-  console.log({
-    title: title?.trim(),
-    work_model: workModel?.trim(),
-    type_job: typeJob?.trim(),
-    location: location,
-    description: description.trim(),
-  });
-
-  expect(title).not.toBeNull();
-  expect(workModel).not.toBeNull();
-  expect(typeJob).not.toBeNull();
-  expect(location).not.toBeNull();
-  expect(description).not.toBeNull();
 });
