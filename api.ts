@@ -12,6 +12,8 @@ import { scraperJobWorkableHandler } from './src/routes/job-scraper-workable';
 import { jobWorkableHandler } from './src/routes/job-workable';
 import { scraperJobQuickinHandler } from './src/routes/job-scraper-quickin';
 import { jobQuickinHandler } from './src/routes/job-quickin';
+import { scraperJobLeverHandler } from './src/routes/job-scraper-lever';
+import { jobLeverHandler } from './src/routes/job-lever';
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -509,6 +511,116 @@ const swaggerDocument = {
           }
         }
       }
+    },
+    '/scraper-job-lever': {
+      post: {
+        summary: 'Coletar informações de vagas do Lever',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL do Lever Job Board'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações das vagas coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalVagas: {
+                      type: 'integer'
+                    },
+                    vagas: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          area: { type: 'string' },
+                          title: { type: 'string' },
+                          url_job: { type: 'string' },
+                          work_model: { type: 'string' },
+                          type_job: { type: 'string' },
+                          location: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '500': {
+            description: 'Erro ao coletar informações das vagas'
+          }
+        }
+      }
+    },
+    '/job-lever': {
+      post: {
+        summary: 'Buscar informações detalhadas de uma vaga do Lever',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL da vaga específica do Lever'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações detalhadas da vaga coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    location_workmodel: { type: 'string' },
+                    area: { type: 'string' },
+                    type_job: { type: 'string' },
+                    work_model: { type: 'string' },
+                    description: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '404': {
+            description: 'Não foi possível encontrar informações da vaga'
+          },
+          '500': {
+            description: 'Erro ao coletar informações da vaga'
+          }
+        }
+      }
     }
   }
 };
@@ -526,6 +638,8 @@ app.post('/scraper-job-workable', (req, res, next) => scraperJobWorkableHandler(
 app.post('/job-workable', (req, res, next) => jobWorkableHandler(req, res, next));
 app.post('/scraper-job-quickin', (req, res, next) => scraperJobQuickinHandler(req, res, next));
 app.post('/job-quickin', (req, res, next) => jobQuickinHandler(req, res, next));
+app.post('/scraper-job-lever', (req, res, next) => scraperJobLeverHandler(req, res, next));
+app.post('/job-lever', (req, res, next) => jobLeverHandler(req, res, next));
 
 const server = app.listen(port, () => {
   console.log(`API rodando em http://localhost:${port}`);
