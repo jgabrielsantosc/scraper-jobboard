@@ -10,6 +10,8 @@ import { scraperJobGreenhouse } from './src/routes/job-scraper-greenhouse';
 import { jobGreenhouseHandler } from './src/routes/job-greenhouse';
 import { scraperJobWorkableHandler } from './src/routes/job-scraper-workable';
 import { jobWorkableHandler } from './src/routes/job-workable';
+import { scraperJobQuickinHandler } from './src/routes/job-scraper-quickin';
+import { jobQuickinHandler } from './src/routes/job-quickin';
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -400,6 +402,113 @@ const swaggerDocument = {
           }
         }
       }
+    },
+    '/scraper-job-quickin': {
+      post: {
+        summary: 'Coletar informações de vagas do Quickin',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL do Quickin Job Board'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações das vagas coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalVagas: {
+                      type: 'integer'
+                    },
+                    vagas: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          title: { type: 'string' },
+                          link: { type: 'string' },
+                          location: { type: 'string' },
+                          work_model: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '500': {
+            description: 'Erro ao coletar informações das vagas'
+          }
+        }
+      }
+    },
+    '/job-quickin': {
+      post: {
+        summary: 'Coletar informações detalhadas de uma vaga do Quickin',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL da vaga no Quickin',
+                    example: 'https://jobs.quickin.io/koin/jobs/66f5c84ed7a208001334eedd'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações da vaga coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    contract_model: { type: 'string' },
+                    location: { type: 'string' },
+                    work_model: { type: 'string' },
+                    all_content: { type: 'string' },
+                    requirements: { type: 'string' },
+                    benefits: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '500': {
+            description: 'Erro ao coletar informações da vaga'
+          }
+        }
+      }
     }
   }
 };
@@ -415,6 +524,8 @@ app.post('/scraper-job-greenhouse', (req, res, next) => scraperJobGreenhouse(req
 app.post('/job-greenhouse', jobGreenhouseHandler);
 app.post('/scraper-job-workable', (req, res, next) => scraperJobWorkableHandler(req, res, next));
 app.post('/job-workable', (req, res, next) => jobWorkableHandler(req, res, next));
+app.post('/scraper-job-quickin', (req, res, next) => scraperJobQuickinHandler(req, res, next));
+app.post('/job-quickin', (req, res, next) => jobQuickinHandler(req, res, next));
 
 const server = app.listen(port, () => {
   console.log(`API rodando em http://localhost:${port}`);
