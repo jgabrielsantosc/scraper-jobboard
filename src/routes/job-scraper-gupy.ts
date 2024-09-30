@@ -1,11 +1,14 @@
-import { Request, Response } from 'express';
-import { chromium } from 'playwright';
+import { Request, Response, NextFunction } from 'express';
+import { chromium, Page } from 'playwright';
+import { ExpressHandler } from '../types';
 
-export async function scraperJobGupy(req: Request, res: Response) {
+
+export const scraperJobGupy: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { url } = req.body;
 
   if (!url) {
-    return res.status(400).json({ error: 'URL não fornecida' });
+    res.status(400).json({ error: 'URL não fornecida' });
+    return;
   }
 
   try {
@@ -16,22 +19,51 @@ export async function scraperJobGupy(req: Request, res: Response) {
     await page.goto(url);
     await page.waitForLoadState('networkidle');
 
-    const vagas = await page.evaluate(() => {
-      const vagasElements = document.querySelectorAll('[data-testid="job-list__listitem"]');
-      return Array.from(vagasElements).map((vaga) => {
-        const titulo = vaga.querySelector('.sc-f5007364-4')?.textContent?.trim();
-        const localizacao = vaga.querySelector('.sc-f5007364-5')?.textContent?.trim();
-        const tipo = vaga.querySelector('.sc-f5007364-6')?.textContent?.trim();
-        const link = vaga.querySelector('[data-testid="job-list__listitem-href"]')?.getAttribute('href');
-        return { titulo, localizacao, tipo, link: link ? `${url}${link}` : undefined };
-      });
-    });
+    let todasAsVagas: any[] = [];
+    let paginaAtual = 1;
+
+    while (true) {
+      const vagasDaPagina: any[] = await coletarInformacoesDaPagina(page);
+      todasAsVagas = todasAsVagas.concat(vagasDaPagina);
+
+      const botaoProxima = page.locator('[data-testid="pagination-next-button"]');
+      const botaoProximaDesabilitado = await botaoProxima.getAttribute('disabled');
+
+      if (botaoProximaDesabilitado === null) {
+        await botaoProxima.click();
+        await page.waitForLoadState('networkidle');
+        paginaAtual++;
+      } else {
+        break;
+      }
+    }
 
     await browser.close();
 
-    res.json({ totalVagas: vagas.length, vagas });
+    res.json({ totalVagas: todasAsVagas.length, vagas: todasAsVagas });
   } catch (error) {
     console.error('Erro ao coletar informações das vagas:', error);
     res.status(500).json({ error: 'Erro ao coletar informações das vagas' });
   }
+}
+
+async function coletarInformacoesDaPagina(page: Page) {
+  const vagas = await page.locator('[data-testid="job-list__listitem"]').all();
+  const informacoes = [];
+
+  for (const vaga of vagas) {
+    const titulo = await vaga.locator('.sc-f5007364-4').textContent();
+    const localizacao = await vaga.locator('.sc-f5007364-5').textContent();
+    const tipo = await vaga.locator('.sc-f5007364-6').textContent();
+    const link = await vaga.locator('[data-testid="job-list__listitem-href"]').getAttribute('href');
+
+    informacoes.push({
+      titulo: titulo?.trim(),
+      localizacao: localizacao?.trim(),
+      tipo: tipo?.trim(),
+      link: link ? `${new URL(page.url()).origin}${link}` : undefined
+    });
+  }
+
+  return informacoes;
 }

@@ -1,48 +1,60 @@
-import { Request, Response } from 'express';
-import { test } from '@playwright/test';
+import { Request, Response, NextFunction } from 'express';
+import { chromium, Page } from 'playwright';
+import { ExpressHandler } from '../types';
 
-export async function jobGupyHandler(req: Request, res: Response) {
-  const url = req.query.url as string;
+/**
+ * Manipula a requisição para coletar informações de uma vaga no Gupy
+ * @param req - Objeto de requisição Express
+ * @param res - Objeto de resposta Express
+ */
+export const jobGupyHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { url } = req.body;
 
   if (!url) {
-    return res.status(400).json({ error: 'URL parameter is required' });
+    res.status(400).json({ error: 'URL parameter is required' });
+    return;
   }
 
-  const result = await test.step('Coletar informações da vaga', async () => {
-    const { page } = await test.createBrowserContext();
-    
+  try {
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
     await page.goto(url);
     await page.waitForLoadState('networkidle');
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(2000);
 
-    const infoDetalhada = {
-      type_job: await getTextContent(page, '.sc-dfd42894-0.bzQMFp', 0),
-      work_model: await getTextContent(page, '.sc-dfd42894-0.bzQMFp', 1),
-      pcd: await getTextContent(page, '.sc-dfd42894-0.bzQMFp', 2),
-      pub_job: await getTextContent(page, '.sc-ccd5d36-11.dmmNfl', 0),
-      deadline: await getTextContent(page, '.sc-ccd5d36-11.dmmNfl', 1),
-      description_job: await getTextContent(page, '.sc-add46fb1-3.cOkxvQ', 0),
-      requirements: await getTextContent(page, '.sc-add46fb1-3.cOkxvQ', 1),
-      infos_extras: await getTextContent(page, '.sc-add46fb1-3.cOkxvQ', 2) || ' ',
-      etapas: await getTextContent(page, '.sc-c87ac0d4-0.gDozGp', 0) || ' ',
-      about: await getTextContent(page, '.sc-add46fb1-3.cOkxvQ', 3) || ' ',
-    };
+    const infoDetalhada = await page.evaluate(() => {
+      function getTextContent(selector: string, index: number = 0): string {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > index) {
+          const text = elements[index].textContent;
+          return text ? text.trim() : '';
+        }
+        return '';
+      }
 
-    await page.close();
+      return {
+        type_job: getTextContent('.sc-dfd42894-0.bzQMFp', 0),
+        work_model: getTextContent('.sc-dfd42894-0.bzQMFp', 1),
+        pcd: getTextContent('.sc-dfd42894-0.bzQMFp', 2),
+        pub_job: getTextContent('.sc-ccd5d36-11.dmmNfl', 0),
+        deadline: getTextContent('.sc-ccd5d36-11.dmmNfl', 1),
+        description_job: getTextContent('.sc-add46fb1-3.cOkxvQ', 0),
+        requirements: getTextContent('.sc-add46fb1-3.cOkxvQ', 1),
+        infos_extras: getTextContent('.sc-add46fb1-3.cOkxvQ', 2) || ' ',
+        etapas: getTextContent('.sc-c87ac0d4-0.gDozGp', 0) || ' ',
+        about: getTextContent('.sc-add46fb1-3.cOkxvQ', 3) || ' ',
+      };
+    });
 
-    return infoDetalhada;
-  });
+    await browser.close();
 
-  res.json(result);
-}
-
-async function getTextContent(page, selector: string, index: number): Promise<string> {
-  const elements = await page.locator(selector).all();
-  if (elements.length > index) {
-    const text = await elements[index].textContent();
-    return text ? text.trim() : ' ';
+    res.json(infoDetalhada);
+  } catch (error) {
+    console.error('Erro ao coletar informações da vaga:', error);
+    res.status(500).json({ error: 'Erro ao coletar informações da vaga' });
   }
-  return ' ';
 }
