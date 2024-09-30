@@ -6,6 +6,8 @@ import { scraperJobGupy } from './src/routes/job-scraper-gupy';
 import { jobGupyHandler } from './src/routes/job-gupy';
 import { scraperJobInhireHandler } from './src/routes/job-scraper-inhire';
 import { jobInhireHandler } from './src/routes/job-inhire';
+import { scraperJobGreenhouse } from './src/routes/job-scraper-greenhouse';
+import { jobGreenhouseHandler } from './src/routes/job-greenhouse';
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -224,6 +226,63 @@ const swaggerDocument = {
           }
         }
       }
+    },
+    '/scraper-job-greenhouse': {
+      post: {
+        summary: 'Coletar informações de vagas do Greenhouse',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL do Greenhouse Job Board'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações das vagas coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalVagas: {
+                      type: 'integer'
+                    },
+                    vagas: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          area: { type: 'string' },
+                          title: { type: 'string' },
+                          location: { type: 'string' },
+                          link: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '500': {
+            description: 'Erro ao coletar informações das vagas'
+          }
+        }
+      }
     }
   }
 };
@@ -235,6 +294,8 @@ app.post('/scraper-job-gupy', (req, res, next) => scraperJobGupy(req, res, next)
 app.post('/job-gupy', (req, res, next) => jobGupyHandler(req, res, next));
 app.post('/scraper-job-inhire', scraperJobInhireHandler);
 app.post('/job-inhire', (req, res, next) => jobInhireHandler(req, res, next));
+app.post('/scraper-job-greenhouse', (req, res, next) => scraperJobGreenhouse(req, res, next));
+app.post('/job-greenhouse', jobGreenhouseHandler);
 
 const server = app.listen(port, () => {
   console.log(`API rodando em http://localhost:${port}`);
