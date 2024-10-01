@@ -1,5 +1,5 @@
 # Imagem base
-FROM node:14
+FROM node:18
 
 # Diretório de trabalho
 WORKDIR /app
@@ -10,8 +10,9 @@ COPY package*.json ./
 # Instalar dependências
 RUN npm install
 
-# Copiar o resto dos arquivos do projeto
+# Copiar o resto dos arquivos do projeto, excluindo a pasta de testes
 COPY . .
+RUN rm -rf tests
 
 # Compilar o TypeScript
 RUN npm run build
@@ -20,4 +21,4 @@ RUN npm run build
 EXPOSE 3001
 
 # Comando para iniciar a aplicação
-CMD ["node", "dist/api.js"]
+CMD ["npm", "run", "serve"]
