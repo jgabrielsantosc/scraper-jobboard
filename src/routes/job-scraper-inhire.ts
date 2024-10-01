@@ -19,6 +19,9 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
       userAgent:
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
         'Chrome/85.0.4183.83 Safari/537.36',
+      geolocation: { longitude: -46.6333, latitude: -23.5505 }, // Coordenadas de São Paulo, Brasil
+      permissions: ['geolocation'],
+      timezoneId: 'America/Sao_Paulo', // Fuso horário de São Paulo
     });
 
     const page = await context.newPage();
@@ -26,7 +29,7 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     await page.goto(url);
     await page.waitForLoadState('networkidle');
 
-    await page.waitForSelector('.css-jswd32.eicjt3c5');
+    await page.waitForSelector('.css-jswd32.eicjt3c5', { timeout: 90000 });
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(2000);

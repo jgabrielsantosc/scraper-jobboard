@@ -24,6 +24,9 @@ const jobInhireHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, f
             ignoreHTTPSErrors: true,
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
                 'Chrome/85.0.4183.83 Safari/537.36',
+            geolocation: { longitude: -46.6333, latitude: -23.5505 }, // Coordenadas de São Paulo, Brasil
+            permissions: ['geolocation'],
+            timezoneId: 'America/Sao_Paulo', // Fuso horário de São Paulo
         });
         const page = yield context.newPage();
         // Navegar para a URL fornecida
