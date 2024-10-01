@@ -4,9 +4,10 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/api.ts",
-    "build": "tsc",
-    "serve": "node dist/src/api.js",
-    "test": "playwright test src/tests"
+    "build": "tsc -p tsconfig.build.json && echo 'TypeScript compilation complete' && ls -R dist",
+    "serve": "node dist/src/api.ts",
+    "test": "playwright test src/tests",
+    "postbuild": "ls -R dist"
   },
   "keywords": [],
   "author": "",
