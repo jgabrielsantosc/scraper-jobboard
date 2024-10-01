@@ -28,7 +28,7 @@ export const scraperJobQuickinHandler: ExpressHandler = async (req: Request, res
       const location = await jobCard.$eval('td span[data-v-4491386a]', el => el.textContent?.trim());
       const workModel = await jobCard.$eval('td span.badge-secondary', el => el.textContent?.trim());
 
-      jobs.push({ title, link, location, work_model: workModel });
+      jobs.push({ title, url_job: link, location, work_model: workModel });
     }
 
     await browser.close();

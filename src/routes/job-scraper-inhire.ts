@@ -12,6 +12,7 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
 
   let browser;
   try {
+    console.log('Iniciando o navegador...');
     browser = await chromium.launch({ headless: true });
 
     const context = await browser.newContext({
@@ -26,14 +27,17 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
 
     const page = await context.newPage();
 
-    await page.goto(url);
-    await page.waitForLoadState('networkidle');
+    console.log(`Navegando para a URL: ${url}`);
+    await page.goto(url, { timeout: 120000, waitUntil: 'networkidle' });
 
-    await page.waitForSelector('.css-jswd32.eicjt3c5', { timeout: 90000 });
+    console.log('Esperando o seletor .css-jswd32.eicjt3c5...');
+    await page.waitForSelector('.css-jswd32.eicjt3c5', { timeout: 120000 });
 
+    console.log('Rolando a página...');
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(2000);
 
+    console.log('Extraindo informações das vagas...');
     const vagas = await page.$$eval('.css-jswd32.eicjt3c5 li', (elements, baseUrl) => {
       return elements.map((el) => {
         const titleElement = el.querySelector('[data-sentry-element="JobPositionName"]');
@@ -45,8 +49,8 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
       });
     }, url); // Passando a URL base como segundo argumento
 
-    console.log(JSON.stringify(vagas, null, 2));
     console.log(`Total de vagas encontradas: ${vagas.length}`);
+    console.log(JSON.stringify(vagas, null, 2));
 
     if (vagas.length === 0) {
       res.status(404).json({ totalVagas: 0, vagas: [], message: 'Nenhuma vaga encontrada' });

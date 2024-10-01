@@ -18,6 +18,8 @@ import { scraperJobAblerHandler } from './routes/job-scraper-abler';
 import { jobAblerHandler } from './routes/job-abler';
 import { scraperJobSolidesHandler } from './routes/job-scraper-solides';
 import { jobSolidesHandler } from './routes/job-solides';
+import { handleJobBoardRequest } from './routes/unified-job-scraper';
+import { handleJobDetailsRequest } from './routes/unified-job-details';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -36,6 +38,106 @@ const swaggerDocument = {
     description: 'API para coletar informações de vagas de diferentes plataformas'
   },
   paths: {
+    '/scraper-job': {
+      post: {
+        summary: 'Coletar informações de vagas de qualquer job board',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL do job board'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações das vagas coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalVagas: {
+                      type: 'integer'
+                    },
+                    vagas: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          url_job: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida ou job board não suportado'
+          },
+          '500': {
+            description: 'Erro ao processar a requisição'
+          }
+        }
+      }
+    },
+    '/job-details': {
+      post: {
+        summary: 'Coletar informações detalhadas de uma vaga',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL da vaga no job board'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações da vaga coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    location: { type: 'string' },
+                    description: { type: 'string' },
+                    // Outros campos específicos de cada job board...
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida ou job board não suportado'
+          },
+          '500': {
+            description: 'Erro ao processar a requisição'
+          }
+        }
+      }
+    },
     '/scraper-job-gupy': {
       post: {
         summary: 'Coletar informações de vagas do Gupy',
@@ -72,10 +174,7 @@ const swaggerDocument = {
                       items: {
                         type: 'object',
                         properties: {
-                          titulo: { type: 'string' },
-                          localizacao: { type: 'string' },
-                          tipo: { type: 'string' },
-                          link: { type: 'string' }
+                          url_job: { type: 'string' }
                         }
                       }
                     }
@@ -105,7 +204,7 @@ const swaggerDocument = {
                 properties: {
                   url: {
                     type: 'string',
-                    description: 'URL da vaga específica do Gupy'
+                    description: 'URL da vaga no Gupy'
                   }
                 },
                 required: ['url']
@@ -115,22 +214,116 @@ const swaggerDocument = {
         },
         responses: {
           '200': {
-            description: 'Informações detalhadas da vaga coletadas com sucesso',
+            description: 'Informações da vaga coletadas com sucesso',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    type_job: { type: 'string' },
-                    work_model: { type: 'string' },
-                    pcd: { type: 'string' },
-                    pub_job: { type: 'string' },
-                    deadline: { type: 'string' },
-                    description_job: { type: 'string' },
-                    requirements: { type: 'string' },
-                    infos_extras: { type: 'string' },
-                    etapas: { type: 'string' },
-                    about: { type: 'string' }
+                    title: { type: 'string' },
+                    location: { type: 'string' },
+                    description: { type: 'string' },
+                    // Outros campos específicos de cada job board...
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '500': {
+            description: 'Erro ao coletar informações da vaga'
+          }
+        }
+      }
+    },
+    '/scraper-job-greenhouse': {
+      post: {
+        summary: 'Coletar informações de vagas do Greenhouse',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL do Greenhouse Job Board'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações das vagas coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalVagas: {
+                      type: 'integer'
+                    },
+                    vagas: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          url_job: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '500': {
+            description: 'Erro ao coletar informações das vagas'
+          }
+        }
+      }
+    },
+    '/job-greenhouse': {
+      post: {
+        summary: 'Coletar informações detalhadas de uma vaga do Greenhouse',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL da vaga no Greenhouse'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações da vaga coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    location: { type: 'string' },
+                    description: { type: 'string' },
+                    // Outros campos específicos de cada job board...
                   }
                 }
               }
@@ -230,111 +423,6 @@ const swaggerDocument = {
                   properties: {
                     title: { type: 'string' },
                     workModel: { type: 'string' },
-                    location: { type: 'string' },
-                    description: { type: 'string' }
-                  }
-                }
-              }
-            }
-          },
-          '400': {
-            description: 'URL não fornecida'
-          },
-          '404': {
-            description: 'Não foi possível encontrar informações da vaga'
-          },
-          '500': {
-            description: 'Erro ao coletar informações da vaga'
-          }
-        }
-      }
-    },
-    '/scraper-job-greenhouse': {
-      post: {
-        summary: 'Coletar informações de vagas do Greenhouse',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  url: {
-                    type: 'string',
-                    description: 'URL do Greenhouse Job Board'
-                  }
-                },
-                required: ['url']
-              }
-            }
-          }
-        },
-        responses: {
-          '200': {
-            description: 'Informações das vagas coletadas com sucesso',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    totalVagas: {
-                      type: 'integer'
-                    },
-                    vagas: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          area: { type: 'string' },
-                          title: { type: 'string' },
-                          location: { type: 'string' },
-                          link: { type: 'string' }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          '400': {
-            description: 'URL não fornecida'
-          },
-          '500': {
-            description: 'Erro ao coletar informações das vagas'
-          }
-        }
-      }
-    },
-    '/job-greenhouse': {
-      post: {
-        summary: 'Buscar informações de uma vaga do Greenhouse',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  url: {
-                    type: 'string',
-                    description: 'URL da vaga no Greenhouse'
-                  }
-                },
-                required: ['url']
-              }
-            }
-          }
-        },
-        responses: {
-          '200': {
-            description: 'Informações da vaga coletadas com sucesso',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    title: { type: 'string' },
                     location: { type: 'string' },
                     description: { type: 'string' }
                   }
@@ -888,7 +976,13 @@ const swaggerDocument = {
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// Routes
+// Rota única para processar detalhes de qualquer job board
+app.post('/job-details', handleJobDetailsRequest);
+
+// Rota única para processar qualquer job board
+app.post('/scraper-job', handleJobBoardRequest);
+
+// Rotas existentes
 app.post('/scraper-job-gupy', (req, res, next) => scraperJobGupy(req, res, next));
 app.post('/job-gupy', (req, res, next) => jobGupyHandler(req, res, next));
 app.post('/scraper-job-inhire', scraperJobInhireHandler);
