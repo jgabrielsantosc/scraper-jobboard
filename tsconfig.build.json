@@ -3,6 +3,8 @@
     "exclude": ["src/tests", "**/*.spec.ts"],
     "compilerOptions": {
         "outDir": "./dist",
-        "rootDir": "./src"
-    }
+        "rootDir": "./src",
+        "resolveJsonModule": true
+    },
+    "include": ["src/**/*"]
 }
