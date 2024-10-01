@@ -24,11 +24,14 @@ const scraperJobInhireHandler = (req, res, next) => __awaiter(void 0, void 0, vo
             ignoreHTTPSErrors: true,
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
                 'Chrome/85.0.4183.83 Safari/537.36',
+            geolocation: { longitude: -46.6333, latitude: -23.5505 }, // Coordenadas de São Paulo, Brasil
+            permissions: ['geolocation'],
+            timezoneId: 'America/Sao_Paulo', // Fuso horário de São Paulo
         });
         const page = yield context.newPage();
         yield page.goto(url);
         yield page.waitForLoadState('networkidle');
-        yield page.waitForSelector('.css-jswd32.eicjt3c5');
+        yield page.waitForSelector('.css-jswd32.eicjt3c5', { timeout: 90000 });
         yield page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
         yield page.waitForTimeout(2000);
         const vagas = yield page.$$eval('.css-jswd32.eicjt3c5 li', (elements, baseUrl) => {
