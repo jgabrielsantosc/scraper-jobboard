@@ -16,6 +16,8 @@ import { scraperJobLeverHandler } from './src/routes/job-scraper-lever';
 import { jobLeverHandler } from './src/routes/job-lever';
 import { scraperJobAblerHandler } from './src/routes/job-scraper-abler';
 import { jobAblerHandler } from './src/routes/job-abler';
+import { scraperJobSolidesHandler } from './src/routes/job-scraper-solides';
+import { jobSolidesHandler } from './src/routes/job-solides';
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -770,6 +772,113 @@ const swaggerDocument = {
           }
         }
       }
+    },
+    '/scraper-job-solides': {
+      post: {
+        summary: 'Coletar informações de vagas do Solides',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL do Solides Job Board'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações das vagas coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    totalVagas: {
+                      type: 'integer'
+                    },
+                    vagas: {
+                      type: 'array',
+                      items: {
+                        type: 'string'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '404': {
+            description: 'Nenhuma vaga encontrada'
+          },
+          '500': {
+            description: 'Erro ao coletar informações das vagas'
+          }
+        }
+      }
+    },
+    '/job-solides': {
+      post: {
+        summary: 'Coletar informações detalhadas de uma vaga do Solides',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL da vaga do Solides'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Informações da vaga coletadas com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    location: { type: 'string' },
+                    contractType: { type: 'string' },
+                    jobType: { type: 'string' },
+                    seniority: { type: 'string' },
+                    description: { type: 'string' },
+                    educations: { type: 'string' },
+                    address: { type: 'string' }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida'
+          },
+          '404': {
+            description: 'Não foi possível encontrar informações da vaga'
+          },
+          '500': {
+            description: 'Erro ao coletar informações da vaga'
+          }
+        }
+      }
     }
   }
 };
@@ -791,6 +900,8 @@ app.post('/scraper-job-lever', (req, res, next) => scraperJobLeverHandler(req, r
 app.post('/job-lever', (req, res, next) => jobLeverHandler(req, res, next));
 app.post('/scraper-job-abler', (req, res, next) => scraperJobAblerHandler(req, res, next));
 app.post('/job-abler', (req, res, next) => jobAblerHandler(req, res, next));
+app.post('/scraper-job-solides', (req, res, next) => scraperJobSolidesHandler(req, res, next));
+app.post('/job-solides', (req, res, next) => jobSolidesHandler(req, res, next));
 
 const server = app.listen(port, () => {
   console.log(`API rodando em http://localhost:${port}`);
