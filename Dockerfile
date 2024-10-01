@@ -2,12 +2,18 @@
 FROM mcr.microsoft.com/playwright:v1.40.0-jammy
 
 # Diretório de trabalho
-WORKDIR /app
+WORKDIR /usr/src/app
 
 # Copiar arquivos de dependências
 COPY package*.json ./
 RUN npm ci
 COPY . .
+
+# Instalar dependências
+RUN npm ci
+
+# Copiar arquivos de configuração de TypeScript
+COPY tsconfig.json tsconfig.build.json ./
 
 # Instalar dependências
 RUN npm ci
