@@ -1,33 +1,26 @@
-# Imagem base
-FROM mcr.microsoft.com/playwright:v1.40.0-jammy
+FROM mcr.microsoft.com/playwright:v1.41.0-jammy
 
-# Diretório de trabalho
 WORKDIR /usr/src/app
 
-# Copiar arquivos de dependências
+RUN npm install -g npm@8.19.4
+RUN npm cache clean --force
+
 COPY package*.json ./
 
-# Instalar dependências
-RUN npm ci
+ENV NPM_CONFIG_TIMEOUT=300000
+RUN npm ci --verbose
 
-# Copiar arquivos de configuração de TypeScript e o resto dos arquivos do projeto
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
+COPY src/*.json ./src/
 
-# Instalar Playwright
 RUN npx playwright install --with-deps chromium
 
-# Compilar o TypeScript
 RUN npm run build
 
-# Adicionar comando para listar o conteúdo do diretório dist
 RUN ls -R /usr/src/app/dist
-
-# Adicionar comando para exibir o conteúdo do arquivo api.js
 RUN cat /usr/src/app/dist/api.js
 
-# Expor a porta que a aplicação usa
 EXPOSE 3001
 
-# Comando para iniciar a aplicação
 CMD ["npm", "run", "serve"]
