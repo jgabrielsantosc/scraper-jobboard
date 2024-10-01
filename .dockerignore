@@ -1,5 +1,5 @@
-tests
+node_modules
+npm-debug.log
+src/tests
 *.spec.ts
 *.test.ts
-vaga_*.html
-vagas_*.json
