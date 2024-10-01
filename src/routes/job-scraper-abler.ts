@@ -55,13 +55,13 @@ async function extrairVagas(page: Page) {
     const rows = document.querySelectorAll('table.table tbody tr');
     return Array.from(rows).map(row => {
       const title = row.querySelector('strong')?.textContent?.trim();
-      const url = row.querySelector('a.btn-apply')?.getAttribute('href');
+      const url_job = row.querySelector('a.btn-apply')?.getAttribute('href');
       const pub_date = row.querySelector('td:nth-child(2)')?.textContent?.trim();
       const seniority = row.querySelector('td:nth-child(3)')?.textContent?.trim();
       const contract_model = row.querySelector('td:nth-child(4)')?.textContent?.trim();
       const location = row.querySelector('td:nth-child(5)')?.textContent?.trim();
 
-      return { title, url, pub_date, seniority, contract_model, location };
+      return { title, url_job, pub_date, seniority, contract_model, location };
     });
   });
 }

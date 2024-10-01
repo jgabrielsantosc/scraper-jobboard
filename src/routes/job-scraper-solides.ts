@@ -32,7 +32,7 @@ export const scraperJobSolidesHandler: ExpressHandler = async (req: Request, res
     if (jobUrls.length === 0) {
       res.status(404).json({ error: 'Nenhuma vaga encontrada' });
     } else {
-      res.json({ totalVagas: jobUrls.length, vagas: jobUrls });
+      res.json({ totalVagas: jobUrls.length, vagas: jobUrls.map(url => ({ url_job: url })) });
     }
   } catch (error) {
     console.error('Erro ao coletar informações das vagas:', error);

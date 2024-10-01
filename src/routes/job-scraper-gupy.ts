@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { chromium, Page } from 'playwright';
 import { ExpressHandler } from '../types';
 
-
 export const scraperJobGupy: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { url } = req.body;
 
@@ -61,7 +60,7 @@ async function coletarInformacoesDaPagina(page: Page) {
       titulo: titulo?.trim(),
       localizacao: localizacao?.trim(),
       tipo: tipo?.trim(),
-      link: link ? `${new URL(page.url()).origin}${link}` : undefined
+      url_job: link ? `${new URL(page.url()).origin}${link}` : undefined
     });
   }
 
