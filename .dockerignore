@@ -1,0 +1,5 @@
+tests
+*.spec.ts
+*.test.ts
+vaga_*.html
+vagas_*.json
