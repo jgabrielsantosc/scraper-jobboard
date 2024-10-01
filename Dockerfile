@@ -2,25 +2,23 @@ FROM mcr.microsoft.com/playwright:v1.41.0-jammy
 
 WORKDIR /usr/src/app
 
-RUN npm install -g npm@8.19.4
-RUN npm cache clean --force
+# Copiar package.json e package-lock.json
+COPY package.json package-lock.json ./
 
-COPY package*.json ./
+# Instalar dependências
+RUN npm install
 
-ENV NPM_CONFIG_TIMEOUT=300000
-RUN npm ci --verbose
+# Copiar todo o código fonte
+COPY . .
 
-COPY tsconfig.json tsconfig.build.json ./
-COPY src ./src
-COPY src/*.json ./src/
-
+# Instalar dependências do Playwright
 RUN npx playwright install --with-deps chromium
 
+# Compilar a aplicação
 RUN npm run build
 
-RUN ls -R /usr/src/app/dist
-RUN cat /usr/src/app/dist/api.js
+# Expor a porta 3000
+EXPOSE 3000
 
-EXPOSE 3001
-
-CMD ["npm", "run", "serve"]
+# Comando para iniciar a aplicação
+CMD ["npm", "start"]

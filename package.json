@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/api.ts",
-    "build": "tsc -p tsconfig.build.json && echo 'TypeScript compilation complete' && ls -R dist && cp path/to/your/json/*.json dist/",
+    "build": "tsc -p tsconfig.build.json && echo 'TypeScript compilation complete' && ls -R dist && cp src/json/*.json dist/",
     "serve": "node dist/api.js",
     "test": "playwright test src/tests",
     "postbuild": "ls -R dist",

@@ -21,6 +21,8 @@ const job_scraper_abler_1 = require("./routes/job-scraper-abler");
 const job_abler_1 = require("./routes/job-abler");
 const job_scraper_solides_1 = require("./routes/job-scraper-solides");
 const job_solides_1 = require("./routes/job-solides");
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = Number(process.env.PORT) || 3001;
 app.use(express_1.default.json());
