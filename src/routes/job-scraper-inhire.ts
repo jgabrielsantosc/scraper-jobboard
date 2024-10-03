@@ -38,26 +38,19 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     await page.waitForTimeout(2000);
 
     console.log('Extraindo informações das vagas...');
-    const vagas = await page.$$eval('.css-jswd32.eicjt3c5 li', (elements, baseUrl) => {
-      return elements.map((el) => {
-        const titleElement = el.querySelector('[data-sentry-element="JobPositionName"]');
-        const linkElement = el.querySelector('a[data-sentry-element="NavLink"]');
-        return {
-          title_job: titleElement?.textContent?.trim() ?? '',
-          url_job: linkElement ? `${baseUrl}${linkElement.getAttribute('href')}` : '',
-        };
-      });
-    }, url); // Passando a URL base como segundo argumento
+    const jobUrls = await page.$$eval('.css-jswd32.eicjt3c5 li a[data-sentry-element="NavLink"]', (links, baseUrl) => 
+      links.map(link => `${baseUrl}${link.getAttribute('href')}`), url
+    );
+    
+    console.log(`Total de vagas encontradas: ${jobUrls.length}`);
+    console.log(JSON.stringify(jobUrls, null, 2));
 
-    console.log(`Total de vagas encontradas: ${vagas.length}`);
-    console.log(JSON.stringify(vagas, null, 2));
-
-    if (vagas.length === 0) {
+    if (jobUrls.length === 0) {
       res.status(404).json({ totalVagas: 0, vagas: [], message: 'Nenhuma vaga encontrada' });
     } else {
       res.json({
-        totalVagas: vagas.length,
-        vagas: vagas,
+        totalVagas: jobUrls.length,
+        vagas: jobUrls,
       });
     }
   } catch (error) {

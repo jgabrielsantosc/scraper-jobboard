@@ -19,25 +19,12 @@ export const scraperJobQuickinHandler: ExpressHandler = async (req: Request, res
     await page.goto(url);
     await page.waitForLoadState('networkidle');
 
-    const jobCards = await page.$$('tr[data-v-4491386a]');
-    const jobs = [];
-
-    for (const jobCard of jobCards) {
-      const title = await jobCard.$eval('a.text-dark', el => el.textContent?.trim());
-      const link = await jobCard.$eval('a.text-dark', el => (el as HTMLAnchorElement).href);
-      const location = await jobCard.$eval('td span[data-v-4491386a]', el => el.textContent?.trim());
-      const workModel = await jobCard.$eval('td span.badge-secondary', el => el.textContent?.trim());
-
-      jobs.push({ title, url_job: link, location, work_model: workModel });
-    }
+    const jobUrls = await page.$$eval('tr[data-v-4491386a] a.text-dark', links => 
+      links.map(link => (link as HTMLAnchorElement).href)
+    );
 
     await browser.close();
-
-    if (jobs.length === 0) {
-      res.status(404).json({ error: 'Nenhuma vaga encontrada' });
-    } else {
-      res.json({ totalVagas: jobs.length, vagas: jobs });
-    }
+    res.json({ totalVagas: jobUrls.length, vagas: jobUrls });
   } catch (error) {
     console.error('Erro ao coletar informações das vagas:', error);
     res.status(500).json({ error: 'Erro ao coletar informações das vagas' });
