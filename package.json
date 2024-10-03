@@ -8,7 +8,8 @@
     "serve": "node dist/api.js",
     "test": "playwright test src/tests",
     "postbuild": "ls -R dist",
-    "build:digitalocean": "npm install --production=false && npm run build --verbose && npm ci"
+    "build:digitalocean": "npm install --production=false && npm run build --verbose && npm ci",
+    "dev": "nodemon --exec ts-node src/api.ts"
   },
   "keywords": [],
   "author": "",
@@ -38,9 +39,10 @@
     "jest-environment-jsdom": "^29.7.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "nodemon": "^3.0.3"
   },
   "engines": {
-    "node": "16.x"
+    "node": ">=18.x"
   }
 }

@@ -18,23 +18,15 @@ export const jobGreenhouseHandler: ExpressHandler = async (req: Request, res: Re
 
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-    const jobInfo = await page.evaluate(() => {
-      const title = document.querySelector('h1.section-header.section-header--large.font-primary')?.textContent?.trim() || '';
-      const location = document.querySelector('p.body.body--metadata')?.textContent?.trim() || '';
-      const description = document.querySelector('div.job__description.body')?.textContent?.trim() || '';
-
-      return { title, location, description };
+    const links = await page.evaluate(() => {
+      const jobLinks = document.querySelectorAll('a[href*="/jobs/"]');
+      return Array.from(jobLinks).map(link => link.getAttribute('href')).filter(Boolean) as string[];
     });
 
     await browser.close();
 
-    if (!jobInfo.title && !jobInfo.location && !jobInfo.description) {
-      res.status(404).json({ error: 'Não foi possível encontrar informações da vaga' });
-    } else {
-      // Formatar a descrição para Markdown
-      const formattedDescription = jobInfo.description.replace(/\n\n/g, '\n');
-      res.json({ ...jobInfo, description: formattedDescription });
-    }
+    // Retornar apenas os links
+    res.json(links);
   } catch (error) {
     console.error('Erro ao coletar informações da vaga:', error);
     res.status(500).json({ error: 'Erro ao coletar informações da vaga' });

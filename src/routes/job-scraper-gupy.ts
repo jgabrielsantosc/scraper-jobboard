@@ -1,29 +1,18 @@
-import { Request, Response, NextFunction } from 'express';
 import { chromium, Page } from 'playwright';
-import { ExpressHandler } from '../types';
 
-export const scraperJobGupy: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { url } = req.body;
-
-  if (!url) {
-    res.status(400).json({ error: 'URL não fornecida' });
-    return;
-  }
+export const scraperJobGupy = async (url: string): Promise<string[]> => {
+  const jobUrls: string[] = [];
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
   try {
-    const browser = await chromium.launch();
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
     await page.goto(url);
     await page.waitForLoadState('networkidle');
 
-    let todasAsVagas: any[] = [];
-    let paginaAtual = 1;
-
     while (true) {
-      const vagasDaPagina: any[] = await coletarInformacoesDaPagina(page);
-      todasAsVagas = todasAsVagas.concat(vagasDaPagina);
+      const newUrls = await coletarUrlsDaPagina(page);
+      jobUrls.push(...newUrls);
 
       const botaoProxima = page.locator('[data-testid="pagination-next-button"]');
       const botaoProximaDesabilitado = await botaoProxima.getAttribute('disabled');
@@ -31,38 +20,24 @@ export const scraperJobGupy: ExpressHandler = async (req: Request, res: Response
       if (botaoProximaDesabilitado === null) {
         await botaoProxima.click();
         await page.waitForLoadState('networkidle');
-        paginaAtual++;
       } else {
         break;
       }
     }
 
+    return jobUrls;
+  } finally {
     await browser.close();
-
-    res.json({ totalVagas: todasAsVagas.length, vagas: todasAsVagas });
-  } catch (error) {
-    console.error('Erro ao coletar informações das vagas:', error);
-    res.status(500).json({ error: 'Erro ao coletar informações das vagas' });
   }
-}
+};
 
-async function coletarInformacoesDaPagina(page: Page) {
-  const vagas = await page.locator('[data-testid="job-list__listitem"]').all();
-  const informacoes = [];
-
-  for (const vaga of vagas) {
-    const titulo = await vaga.locator('.sc-f5007364-4').textContent();
-    const localizacao = await vaga.locator('.sc-f5007364-5').textContent();
-    const tipo = await vaga.locator('.sc-f5007364-6').textContent();
-    const link = await vaga.locator('[data-testid="job-list__listitem-href"]').getAttribute('href');
-
-    informacoes.push({
-      titulo: titulo?.trim(),
-      localizacao: localizacao?.trim(),
-      tipo: tipo?.trim(),
-      url_job: link ? `${new URL(page.url()).origin}${link}` : undefined
-    });
-  }
-
-  return informacoes;
+async function coletarUrlsDaPagina(page: Page): Promise<string[]> {
+  const baseUrl = new URL(page.url()).origin;
+  return page.evaluate((baseUrl) => {
+    const links = document.querySelectorAll('[data-testid="job-list__listitem-href"]');
+    return Array.from(links).map(link => {
+      const href = link.getAttribute('href');
+      return href ? new URL(href, baseUrl).href : null;
+    }).filter(Boolean) as string[];
+  }, baseUrl);
 }

@@ -19,12 +19,12 @@ export const scraperJobAblerHandler: ExpressHandler = async (req: Request, res: 
     await page.goto(url);
     await page.waitForSelector('table.table');
 
-    let allVagas: any[] = [];
+    let allUrls: string[] = [];
     let hasNextPage = true;
 
     while (hasNextPage) {
-      const vagasDaPagina = await extrairVagas(page);
-      allVagas = allVagas.concat(vagasDaPagina);
+      const urlsDaPagina = await extrairUrls(page);
+      allUrls = allUrls.concat(urlsDaPagina);
 
       hasNextPage = await verificarProximaPagina(page);
       if (hasNextPage) {
@@ -35,10 +35,10 @@ export const scraperJobAblerHandler: ExpressHandler = async (req: Request, res: 
 
     await browser.close();
 
-    if (allVagas.length === 0) {
+    if (allUrls.length === 0) {
       res.status(404).json({ error: 'Nenhuma vaga encontrada' });
     } else {
-      res.json({ totalVagas: allVagas.length, vagas: allVagas });
+      res.json(allUrls);
     }
   } catch (error) {
     console.error('Erro ao coletar informações das vagas:', error);
@@ -50,19 +50,13 @@ export const scraperJobAblerHandler: ExpressHandler = async (req: Request, res: 
   }
 };
 
-async function extrairVagas(page: Page) {
+async function extrairUrls(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const rows = document.querySelectorAll('table.table tbody tr');
     return Array.from(rows).map(row => {
-      const title = row.querySelector('strong')?.textContent?.trim();
       const url_job = row.querySelector('a.btn-apply')?.getAttribute('href');
-      const pub_date = row.querySelector('td:nth-child(2)')?.textContent?.trim();
-      const seniority = row.querySelector('td:nth-child(3)')?.textContent?.trim();
-      const contract_model = row.querySelector('td:nth-child(4)')?.textContent?.trim();
-      const location = row.querySelector('td:nth-child(5)')?.textContent?.trim();
-
-      return { title, url_job, pub_date, seniority, contract_model, location };
-    });
+      return url_job;
+    }).filter(Boolean) as string[];
   });
 }
 
