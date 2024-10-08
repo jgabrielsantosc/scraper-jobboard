@@ -168,5 +168,12 @@ async function scrapeJobsLogic(page: Page, url: string): Promise<string[]> {
     console.log('Possíveis elementos de vagas:', possibleJobElements);
   }
 
+  if (jobUrls.length === 0) {
+    console.log('Nenhuma vaga encontrada. Tentando recarregar a página...');
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(5000);
+    // Tente extrair as vagas novamente
+  }
+
   return jobUrls;
 }
