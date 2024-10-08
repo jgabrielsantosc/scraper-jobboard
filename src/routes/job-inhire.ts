@@ -12,86 +12,62 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
 
   let browser;
   try {
-    browser = await chromium.launch({ headless: true }); // Mudança para modo headless
+    browser = await chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer'
+      ],
+    });
 
     const context = await browser.newContext({
       ignoreHTTPSErrors: true,
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
-                 'Chrome/85.0.4183.83 Safari/537.36',
-      geolocation: { longitude: -46.6333, latitude: -23.5505 }, // Coordenadas de São Paulo, Brasil
+                 'Chrome/117.0.0.0 Safari/537.36',
+      geolocation: { longitude: -46.6333, latitude: -23.5505 },
       permissions: ['geolocation'],
-      timezoneId: 'America/Sao_Paulo', // Fuso horário de São Paulo
+      timezoneId: 'America/Sao_Paulo',
     });
 
     const page = await context.newPage();
 
     console.log('Navegando para a URL:', url);
-    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     console.log('Página carregada');
 
-    await page.waitForLoadState('networkidle');
-    console.log('Estado de rede inativo');
+    // Aguarda um seletor que indica que o conteúdo foi carregado
+    const contentSelector = '#root'; // Ajuste conforme necessário
+    await page.waitForSelector(contentSelector, { timeout: 60000 });
+    console.log('Conteúdo principal disponível');
 
-    // Espere por um elemento que você sabe que sempre estará presente na página
-    await page.waitForSelector('body', { state: 'visible', timeout: 60000 });
+    // Opcional: Aguarda alguns segundos para garantir que o conteúdo foi carregado
+    await page.waitForTimeout(5000);
 
-    // Remova o scroll manual e use a função de avaliação diretamente
+    // Avalia o conteúdo da página
     const content = await page.evaluate(() => {
-      const element = document.querySelector('#root > div > div.css-16qnfbn > div.css-tjublp.e1xgy92m0');
-      return element ? element.innerHTML : '';
+      // Ajuste o seletor para capturar o conteúdo desejado
+      const element = document.querySelector('#root');
+      return element ? (element as HTMLElement).innerText : '';
     });
 
-    // Função para remover tags HTML e adicionar espaçamento
-    const stripHtmlWithSpacing = (html: string) => {
-      const div = document.createElement('div');
-      div.innerHTML = html;
-      
-      // Substituir algumas tags por quebras de linha
-      div.innerHTML = div.innerHTML
-        .replace(/<\/h1>|<\/h2>|<\/h3>|<\/p>|<br>/gi, '$&\n\n')
-        .replace(/<li>/gi, '• ')
-        .replace(/<\/li>/gi, '\n');
-      
-      let text = div.textContent || div.innerText || '';
-      
-      // Remover espaços em excesso e adicionar quebras de linha
-      text = text
-        .replace(/\s+/g, ' ')
-        .replace(/\n\s+/g, '\n')
-        .replace(/([.!?])\s+/g, '$1\n\n')
-        .trim();
-      
-      // Adicionar quebras de linha extras para seções
-      text = text.replace(/([A-Z][a-z]+:)/g, '\n\n$1\n');
-      
-      return text;
-    };
+    // Processa o conteúdo (se necessário)
+    const cleanContent = content.trim();
 
-    // Limpar o HTML e retornar apenas o texto com espaçamento
-    const cleanContent = await page.evaluate(stripHtmlWithSpacing, content);
-
-    // Retornar o conteúdo tratado
-    res.json({ 
+    // Retorna o conteúdo
+    res.json({
       content: cleanContent,
       formattedContent: cleanContent.split('\n')
     });
 
-    // Adicionar logs para depuração
-    const pageContent = await page.content();
-    console.log('Conteúdo da página:', pageContent);
+    // Logs para depuração
+    console.log('Conteúdo encontrado:', cleanContent.substring(0, 100) + '...');
 
-    // Adicionar logs para depuração
-    console.log('URL atual:', page.url());
-    console.log('Título da página:', await page.title());
-    console.log('Conteúdo encontrado:', content.substring(0, 100) + '...');
-
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Erro ao coletar informações da vaga:', error);
-    if (error instanceof Error) {
-      res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: error.message, stack: error.stack });
-    } else {
-      res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: 'Erro desconhecido' });
-    }
+    res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: error.message, stack: error.stack });
     return;
   } finally {
     if (browser) {
