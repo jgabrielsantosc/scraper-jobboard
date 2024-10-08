@@ -78,5 +78,8 @@ export default defineConfig({
   //   url: 'http://127.0.0.1:3000',
   //   reuseExistingServer: !process.env.CI,
   // },
-  timeout: 60000, // Aumenta o tempo limite global para 60 segundos
+  timeout: 60000, // 60 segundos
+  expect: {
+    timeout: 10000 // 10 segundos
+  },
 });
