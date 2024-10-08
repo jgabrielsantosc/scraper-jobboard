@@ -23,11 +23,28 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     console.log('Iniciando o navegador...');
     browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer'
+      ],
     });
 
     context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      ignoreHTTPSErrors: true,
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+      geolocation: { longitude: -46.6333, latitude: -23.5505 },
+      permissions: ['geolocation'],
+      timezoneId: 'America/Sao_Paulo',
+      viewport: { width: 1280, height: 720 },
+    });
+
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt'] });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
     });
 
     page = await context.newPage();
@@ -35,8 +52,12 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     console.log(`Navegando para a URL: ${url}`);
     await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
 
+    await randomDelay();
+
     console.log('Esperando o seletor a[data-sentry-element="NavLink"]...');
-    await page.waitForSelector('a[data-sentry-element="NavLink"]', { timeout: 60000 });
+    await page.waitForSelector('a[data-sentry-element="NavLink"]', { state: 'attached', timeout: 60000 });
+
+    await randomDelay();
 
     const jobUrls = await page.$$eval('a[data-sentry-element="NavLink"]', 
       (links, baseUrl) => links.map(link => new URL(link.getAttribute('href') || '', baseUrl).href), url
@@ -54,7 +75,7 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
       const pageContent = await page.content();
       console.log('Conteúdo da página:', pageContent);
     }
-    res.status(500).json({ error: 'Erro ao coletar informações das vagas', details: error.message });
+    res.status(500).json({ error: 'Erro ao coletar informações das vagas', details: error.message, stack: error.stack });
   } finally {
     if (page) await page.close();
     if (context) await context.close();

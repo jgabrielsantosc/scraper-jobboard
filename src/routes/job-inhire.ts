@@ -50,7 +50,7 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
     page = await context.newPage();
 
     console.log('Navegando para a URL:', url);
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
     console.log('Página carregada');
 
     await randomDelay();
