@@ -22,22 +22,12 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
   try {
     console.log('Iniciando o navegador...');
     browser = await chromium.launch({
-      executablePath: '/usr/bin/chromium-browser',
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
 
     context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-      viewport: { width: 1280, height: 720 },
-      locale: 'pt-BR',
-      timezoneId: 'America/Sao_Paulo',
-    });
-
-    await context.addInitScript(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt'] });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
     });
 
     page = await context.newPage();
@@ -45,40 +35,17 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     console.log(`Navegando para a URL: ${url}`);
     await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
 
-    await randomDelay();
+    console.log('Esperando o seletor a[data-sentry-element="NavLink"]...');
+    await page.waitForSelector('a[data-sentry-element="NavLink"]', { timeout: 60000 });
 
-    await page.waitForSelector('body', { state: 'visible', timeout: 60000 });
-    await page.waitForFunction(() => document.readyState === 'complete');
-
-    await randomDelay();
-
-    // Simular comportamento humano
-    await page.mouse.move(100, 100);
-    await page.mouse.down();
-    await page.mouse.move(200, 200);
-    await page.mouse.up();
-
-    await randomDelay();
-
-    console.log('Esperando o seletor .css-jswd32.eicjt3c5...');
-    await page.waitForSelector('.css-jswd32.eicjt3c5', { timeout: 60000 });
-
-    console.log('Extraindo informações das vagas...');
-    const jobUrls = await page.$$eval('.css-jswd32.eicjt3c5 li a[data-sentry-element="NavLink"]', 
-      (links, baseUrl) => links.map(link => `${baseUrl}${link.getAttribute('href')}`), url
+    const jobUrls = await page.$$eval('a[data-sentry-element="NavLink"]', 
+      (links, baseUrl) => links.map(link => new URL(link.getAttribute('href') || '', baseUrl).href), url
     );
-    
-    console.log(`Total de vagas encontradas: ${jobUrls.length}`);
-    console.log(JSON.stringify(jobUrls, null, 2));
 
-    if (jobUrls.length === 0) {
-      console.log('Nenhuma vaga encontrada. Capturando conteúdo da página...');
-      const pageContent = await page.content();
-      console.log('Conteúdo da página:', pageContent);
-      res.status(404).json([]);
-    } else {
-      res.json(jobUrls);
-    }
+    console.log(`Total de vagas encontradas: ${jobUrls.length}`);
+
+    res.json(jobUrls);
+
   } catch (error: any) {
     console.error('Erro ao coletar informações das vagas:', error);
     if (page) {
