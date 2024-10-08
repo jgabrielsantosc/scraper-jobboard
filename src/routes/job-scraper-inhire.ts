@@ -53,23 +53,30 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     page = await context.newPage();
 
     console.log(`Navegando para a URL: ${url}`);
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 120000 });
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 180000 }); // Aumente o timeout para 3 minutos
     console.log('Página carregada');
 
-    console.log('Capturando screenshot inicial...');
-    await page.screenshot({ path: 'initial-screenshot.png', fullPage: true });
-
-    await randomDelay();
+    await randomDelay(5000, 10000); // Aumente o delay após o carregamento da página
 
     console.log('Esperando o conteúdo carregar...');
-    await page.waitForSelector('#root', { state: 'attached', timeout: 120000 });
+    await page.waitForSelector('#root', { state: 'attached', timeout: 180000 });
     console.log('Conteúdo principal carregado');
 
-    await randomDelay();
+    await randomDelay(5000, 10000);
+
+    console.log('Verificando se há conteúdo dinâmico...');
+    await page.waitForFunction(() => {
+      const root = document.querySelector('#root');
+      return root && root.children.length > 1;
+    }, { timeout: 180000 });
+    console.log('Conteúdo dinâmico detectado');
+
+    await randomDelay(5000, 10000);
 
     console.log('Procurando links de vagas...');
     const jobUrls = await page.evaluate(() => {
       const links = Array.from(document.querySelectorAll('a[href^="/vagas/"]'));
+      console.log('Links encontrados:', links.length);
       return links.map(link => {
         const href = link.getAttribute('href');
         return href ? new URL(href, window.location.href).href : null;
@@ -77,6 +84,26 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     });
 
     console.log(`Total de vagas encontradas: ${jobUrls.length}`);
+
+    const finalUrl = page.url();
+    if (finalUrl !== url) {
+      console.log(`A página foi redirecionada para: ${finalUrl}`);
+    }
+
+    console.log('Capturando informações da página...');
+    const pageTitle = await page.title();
+    const pageUrl = page.url();
+    console.log(`Título da página: ${pageTitle}`);
+    console.log(`URL atual: ${pageUrl}`);
+
+    const pageContent = await page.content();
+    console.log('Conteúdo da página:', pageContent.substring(0, 500) + '...');
+
+    if (jobUrls.length === 0) {
+      console.log('Nenhuma vaga encontrada. Capturando mais informações...');
+      const bodyText = await page.evaluate(() => document.body.innerText);
+      console.log('Texto do corpo da página:', bodyText.substring(0, 1000) + '...');
+    }
 
     console.log('Capturando screenshot após carregamento...');
     await page.screenshot({ path: 'loaded-screenshot.png', fullPage: true });
@@ -92,6 +119,20 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
 
     console.log('Capturando screenshot final...');
     await page.screenshot({ path: 'final-screenshot.png', fullPage: true });
+
+    if (jobUrls.length === 0) {
+      console.log('Tentando abordagem alternativa para encontrar vagas...');
+      const alternativeJobUrls = await page.evaluate(() => {
+        const allLinks = Array.from(document.querySelectorAll('a'));
+        return allLinks
+          .filter(link => link.href.includes('/vagas/'))
+          .map(link => link.href);
+      });
+      console.log(`Vagas encontradas (abordagem alternativa): ${alternativeJobUrls.length}`);
+      if (alternativeJobUrls.length > 0) {
+        jobUrls.push(...alternativeJobUrls);
+      }
+    }
 
   } catch (error: any) {
     console.error('Erro ao coletar informações das vagas:', error);
