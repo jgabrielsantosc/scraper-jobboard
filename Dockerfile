@@ -11,8 +11,9 @@ RUN npm ci
 # Copiar todo o código fonte
 COPY . .
 
-# Instalar apenas o navegador Chromium
+# Instalar apenas o navegador Chromium e garantir que os browsers sejam baixados
 RUN npx playwright install chromium
+RUN npx playwright install-deps
 
 # Compilar a aplicação
 RUN npm run build
@@ -39,6 +40,10 @@ RUN apt-get update && apt-get install -y \
     libpango-1.0-0 \
     libcairo2 \
     libasound2
+
+# Verificar a instalação do Playwright
+RUN npx playwright install-deps chromium
+RUN npx playwright install chromium
 
 # Expor a porta 3001 (conforme especificado no App Spec)
 EXPOSE 3001
