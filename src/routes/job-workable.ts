@@ -24,32 +24,40 @@ export const jobWorkableHandler: ExpressHandler = async (
     await page.goto(url);
     await page.waitForLoadState('networkidle');
 
-    // Usando operador de coalescência nula (??)
-    const title = (await page.locator('h1[data-ui="job-title"], h3[data-ui="job-title"]').textContent()) ?? '';
-    const workModel = (await page.locator('span[data-ui="job-workplace"] strong').textContent()) ?? '';
-    const typeJob = (await page.locator('span[data-ui="job-type"]').textContent()) ?? '';
-    const location = (await page.locator('div[data-ui="job-location-tooltip"] span, div[data-ui="job-location"] [data-ellipsis-element="true"], div.styles--1Sarc.styles--Xn8hR [data-ellipsis-element="true"]').textContent()) ?? '';
-    const descriptionHtml = (await page.locator('section[data-ui="job-description"]').innerHTML()) ?? '';
+    // Capturar todo o conteúdo do body
+    const bodyContent = await page.evaluate(() => {
+      return document.body.innerHTML;
+    });
 
-    const description = convert(descriptionHtml, {
-      wordwrap: false,
+    // Converter o HTML para texto com espaçamento
+    const textContent = convert(bodyContent, {
+      wordwrap: 130,
+      preserveNewlines: true,
       selectors: [
+        { selector: 'h1', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
+        { selector: 'h2', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
+        { selector: 'h3', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
+        { selector: 'p', options: { prefix: '\n', suffix: '\n' } },
+        { selector: 'br', options: { format: 'inline', prefix: '\n' } },
+        { selector: 'ul', options: { itemPrefix: '\n • ' } },
+        { selector: 'ol', options: { itemPrefix: '\n  ' } },
         { selector: 'a', options: { ignoreHref: true } },
         { selector: 'img', format: 'skip' }
       ]
     });
 
-    const jobInfo = {
-      title: title.trim(),
-      workModel: workModel.trim(),
-      typeJob: typeJob.trim(),
-      location: location.trim(),
-      description: description.trim(),
-    };
+    // Limpar espaços em branco excessivos
+    const cleanedContent = textContent
+      .replace(/\n\s+\n/g, '\n\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
 
     await browser.close();
 
-    res.json(jobInfo);
+    res.json({
+      content: cleanedContent,
+      formattedContent: cleanedContent.split('\n')
+    });
   } catch (error) {
     console.error('Erro ao coletar informações da vaga:', error);
     next(error); // Passa o erro para o middleware de tratamento de erros
