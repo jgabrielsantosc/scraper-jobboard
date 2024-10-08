@@ -37,6 +37,7 @@ export const jobGupyHandler: ExpressHandler = async (req: Request, res: Response
       }
 
       return {
+        title: getTextContent('h1#h1'), // Usando a mesma função para o título
         type_job: getTextContent('.sc-dfd42894-0.bzQMFp', 0),
         work_model: getTextContent('.sc-dfd42894-0.bzQMFp', 1),
         pcd: getTextContent('.sc-dfd42894-0.bzQMFp', 2),
