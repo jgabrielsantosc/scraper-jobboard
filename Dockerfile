@@ -5,15 +5,26 @@ WORKDIR /usr/src/app
 # Copiar package.json e package-lock.json
 COPY package.json package-lock.json ./
 
-# Instalar dependências
+# Instalar dependênciasr
 RUN npm ci
 
 # Copiar todo o código fonte
 COPY . .
 
-# Instalar apenas o navegador Chromium e garantir que os browsers sejam baixados
+# Instalar Playwright e seus navegadores
+RUN npm install playwright
 RUN npx playwright install chromium
-RUN npx playwright install-deps
+RUN npx playwright install-deps chromium
+
+# Verificar a instalação do Chromium
+RUN ls -la /usr/src/app/node_modules/playwright-core/.local-browsers/chromium-*/chrome-linux/
+
+# Definir permissões corretas
+RUN chmod -R 777 /usr/src/app/node_modules/playwright-core/.local-browsers
+
+# Definir variáveis de ambiente para o Playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/src/app/node_modules/playwright-core/.local-browsers
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Compilar a aplicação
 RUN npm run build
@@ -40,10 +51,6 @@ RUN apt-get update && apt-get install -y \
     libpango-1.0-0 \
     libcairo2 \
     libasound2
-
-# Verificar a instalação do Playwright
-RUN npx playwright install-deps chromium
-RUN npx playwright install chromium
 
 # Expor a porta 3001 (conforme especificado no App Spec)
 EXPOSE 3001
