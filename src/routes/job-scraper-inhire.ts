@@ -74,9 +74,9 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
       console.log('Nenhuma vaga encontrada. Capturando conteúdo da página...');
       const pageContent = await page.content();
       console.log('Conteúdo da página:', pageContent);
-      res.status(404).json({ totalVagas: 0, vagas: [], message: 'Nenhuma vaga encontrada', pageContent });
+      res.status(404).json([]);
     } else {
-      res.json({ totalVagas: jobUrls.length, vagas: jobUrls });
+      res.json(jobUrls);
     }
   } catch (error: any) {
     console.error('Erro ao coletar informações das vagas:', error);

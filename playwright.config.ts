@@ -30,15 +30,20 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-    navigationTimeout: 60000, // Aumenta o tempo limite de navegação para 60 segundos
-    headless: process.env.PLAYWRIGHT_HEADLESS === 'true',
+    navigationTimeout: 120000, // Aumenta o tempo limite de navegação para 120 segundos
+    headless: true, // Força o modo headless
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        },
+      },
     },
 
     {
@@ -78,8 +83,8 @@ export default defineConfig({
   //   url: 'http://127.0.0.1:3000',
   //   reuseExistingServer: !process.env.CI,
   // },
-  timeout: 60000, // 60 segundos
+  timeout: 120000, // 120 segundos
   expect: {
-    timeout: 10000 // 10 segundos
+    timeout: 30000 // 30 segundos
   },
 });

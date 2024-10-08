@@ -36,13 +36,13 @@ export const scraperJobAblerHandler: ExpressHandler = async (req: Request, res: 
     await browser.close();
 
     if (allUrls.length === 0) {
-      res.status(404).json({ error: 'Nenhuma vaga encontrada' });
+      res.status(404).json([]);
     } else {
       res.json(allUrls);
     }
   } catch (error) {
     console.error('Erro ao coletar informações das vagas:', error);
-    res.status(500).json({ error: 'Erro ao coletar informações das vagas' });
+    res.status(500).json([]);
   } finally {
     if (browser) {
       await browser.close();
