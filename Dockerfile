@@ -6,13 +6,13 @@ WORKDIR /usr/src/app
 COPY package.json package-lock.json ./
 
 # Instalar dependências
-RUN npm install
+RUN npm ci
 
 # Copiar todo o código fonte
 COPY . .
 
-# Instalar dependências do Playwright
-RUN npx playwright install --with-deps chromium
+# Instalar apenas o navegador Chromium
+RUN npx playwright install chromium
 
 # Compilar a aplicação
 RUN npm run build
@@ -21,4 +21,4 @@ RUN npm run build
 EXPOSE 3000
 
 # Comando para iniciar a aplicação
-CMD ["npm", "start"]
+CMD ["npm", "run", "serve"]

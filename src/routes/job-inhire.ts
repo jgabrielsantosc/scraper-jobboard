@@ -33,31 +33,13 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
     console.log('Estado de rede inativo');
 
     // Espere por um elemento que você sabe que sempre estará presente na página
-    await page.waitForSelector('body', { state: 'visible', timeout: 120000 });
+    await page.waitForSelector('body', { state: 'visible', timeout: 60000 });
 
-    // Fazer scroll até o final da página
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        let totalHeight = 0;
-        const distance = 100;
-        const timer = setInterval(() => {
-          const scrollHeight = document.body.scrollHeight;
-          window.scrollBy(0, distance);
-          totalHeight += distance;
-
-          if (totalHeight >= scrollHeight) {
-            clearInterval(timer);
-            resolve();
-          }
-        }, 100);
-      });
+    // Remova o scroll manual e use a função de avaliação diretamente
+    const content = await page.evaluate(() => {
+      const element = document.querySelector('#root > div > div.css-16qnfbn > div.css-tjublp.e1xgy92m0');
+      return element ? element.innerHTML : '';
     });
-
-    // Esperar mais um pouco após o scroll
-    await page.waitForTimeout(2000);
-
-    // Capturar o conteúdo dentro do seletor especificado
-    const content = await page.locator('#root > div > div.css-16qnfbn > div.css-tjublp.e1xgy92m0').innerHTML();
 
     // Função para remover tags HTML e adicionar espaçamento
     const stripHtmlWithSpacing = (html: string) => {
@@ -97,6 +79,11 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
     // Adicionar logs para depuração
     const pageContent = await page.content();
     console.log('Conteúdo da página:', pageContent);
+
+    // Adicionar logs para depuração
+    console.log('URL atual:', page.url());
+    console.log('Título da página:', await page.title());
+    console.log('Conteúdo encontrado:', content.substring(0, 100) + '...');
 
   } catch (error: unknown) {
     console.error('Erro ao coletar informações da vaga:', error);
