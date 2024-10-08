@@ -1,6 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { chromium } from 'playwright';
+import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { ExpressHandler } from '../types';
+
+async function randomDelay(min = 1000, max = 3000) {
+  const delay = Math.floor(Math.random() * (max - min + 1) + min);
+  await new Promise(resolve => setTimeout(resolve, delay));
+}
 
 export const jobInhireHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { url } = req.body;
@@ -10,8 +15,12 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
     return;
   }
 
-  let browser;
+  let browser: Browser | null = null;
+  let context: BrowserContext | null = null;
+  let page: Page | null = null;
+
   try {
+    console.log('Iniciando o navegador...');
     browser = await chromium.launch({
       headless: true,
       args: [
@@ -23,32 +32,46 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
       ],
     });
 
-    const context = await browser.newContext({
+    context = await browser.newContext({
       ignoreHTTPSErrors: true,
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
-                 'Chrome/117.0.0.0 Safari/537.36',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
       geolocation: { longitude: -46.6333, latitude: -23.5505 },
       permissions: ['geolocation'],
       timezoneId: 'America/Sao_Paulo',
+      viewport: { width: 1280, height: 720 },
     });
 
-    const page = await context.newPage();
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt'] });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+    });
+
+    page = await context.newPage();
 
     console.log('Navegando para a URL:', url);
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     console.log('Página carregada');
 
+    await randomDelay();
+
     // Aguarda um seletor que indica que o conteúdo foi carregado
     const contentSelector = '#root'; // Ajuste conforme necessário
-    await page.waitForSelector(contentSelector, { timeout: 60000 });
+    await page.waitForSelector(contentSelector, { state: 'attached', timeout: 60000 });
     console.log('Conteúdo principal disponível');
 
-    // Opcional: Aguarda alguns segundos para garantir que o conteúdo foi carregado
-    await page.waitForTimeout(5000);
+    await randomDelay();
+
+    // Simula comportamento humano
+    await page.mouse.move(100, 100);
+    await page.mouse.down();
+    await page.mouse.move(200, 200);
+    await page.mouse.up();
+
+    await randomDelay();
 
     // Avalia o conteúdo da página
     const content = await page.evaluate(() => {
-      // Ajuste o seletor para capturar o conteúdo desejado
       const element = document.querySelector('#root');
       return element ? (element as HTMLElement).innerText : '';
     });
@@ -62,16 +85,20 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
       formattedContent: cleanContent.split('\n')
     });
 
-    // Logs para depuração
     console.log('Conteúdo encontrado:', cleanContent.substring(0, 100) + '...');
 
   } catch (error: any) {
     console.error('Erro ao coletar informações da vaga:', error);
-    res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: error.message, stack: error.stack });
-    return;
-  } finally {
-    if (browser) {
-      await browser.close();
+    if (page) {
+      console.log('Capturando screenshot e conteúdo da página...');
+      await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
+      const pageContent = await page.content();
+      console.log('Conteúdo da página:', pageContent);
     }
+    res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: error.message, stack: error.stack });
+  } finally {
+    if (page) await page.close();
+    if (context) await context.close();
+    if (browser) await browser.close();
   }
 };
