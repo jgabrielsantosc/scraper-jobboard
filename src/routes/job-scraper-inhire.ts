@@ -22,7 +22,8 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
   try {
     console.log('Iniciando o navegador...');
     browser = await chromium.launch({
-      headless: true,
+      executablePath: '/usr/bin/chromium-browser',
+      headless: false,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
 
