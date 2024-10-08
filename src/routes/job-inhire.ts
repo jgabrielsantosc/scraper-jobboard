@@ -25,11 +25,15 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
 
     const page = await context.newPage();
 
-    // Navegar para a URL fornecida com um tempo limite maior
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    console.log('Navegando para a URL:', url);
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    console.log('Página carregada');
 
-    // Esperar pelo seletor específico em vez de um tempo fixo
-    await page.waitForSelector('#root > div > div.css-16qnfbn > div.css-tjublp.e1xgy92m0', { timeout: 60000 });
+    await page.waitForLoadState('networkidle');
+    console.log('Estado de rede inativo');
+
+    // Espere por um elemento que você sabe que sempre estará presente na página
+    await page.waitForSelector('body', { state: 'visible', timeout: 120000 });
 
     // Fazer scroll até o final da página
     await page.evaluate(() => {
@@ -89,6 +93,10 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
       content: cleanContent,
       formattedContent: cleanContent.split('\n')
     });
+
+    // Adicionar logs para depuração
+    const pageContent = await page.content();
+    console.log('Conteúdo da página:', pageContent);
 
   } catch (error: unknown) {
     console.error('Erro ao coletar informações da vaga:', error);
