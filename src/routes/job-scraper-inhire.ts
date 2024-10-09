@@ -1,10 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { chromium } from 'playwright-extra';
-import stealth from 'playwright-extra-plugin-stealth';
+import { chromium } from 'playwright';
+import { ExpressHandler } from '../types';
 
-chromium.use(stealth());
-
-export const scraperJobInhireHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { url } = req.body;
 
   if (!url) {
