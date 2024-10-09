@@ -5,7 +5,7 @@
   "scripts": {
     "start": "ts-node -r tsconfig-paths/register src/api.ts",
     "build": "tsc -p tsconfig.build.json && echo 'TypeScript compilation complete' && ls -R dist && cp src/json/*.json dist/",
-    "serve": "playwright install && NODE_ENV=production PLAYWRIGHT_BROWSERS_PATH=/app/node_modules/playwright-core/.local-browsers node dist/api.js",
+    "serve": "playwright install node dist/api.js",
     "install-browsers": "playwright install chromium firefox webkit",
     "build:digitalocean": "npm ci && npm run install-browsers && npm run build --verbose",
     "postbuild": "ls -R dist",
