@@ -10,7 +10,7 @@
     "build:digitalocean": "npm ci && npm run install-browsers && npm run build --verbose",
     "postbuild": "ls -R dist",
     "dev": "nodemon --exec ts-node src/api.ts",
-    "start:prod": "PLAYWRIGHT_BROWSERS_PATH=0 node dist/api.js"
+    "start:prod": "node dist/api.js"
   },
   "keywords": [],
   "author": "",

@@ -11,6 +11,9 @@ COPY src ./src
 # Instalar dependências
 RUN npm ci
 
+# Instalar os navegadores do Playwright
+RUN npx playwright install chromium firefox webkit
+
 # Compilar TypeScript
 RUN npm run build
 
@@ -18,4 +21,4 @@ RUN npm run build
 EXPOSE 3001
 
 # Comando para iniciar a aplicação
-CMD ["npm", "run", "serve"]
+CMD ["npm", "run", "start:prod"]
