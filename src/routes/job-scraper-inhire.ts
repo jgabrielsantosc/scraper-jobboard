@@ -27,39 +27,15 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
 
     page = await context.newPage();
 
-    // Add event listeners
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    page.on('pageerror', error => console.error('PAGE ERROR:', error));
-    page.on('request', request => console.log('>>', request.method(), request.url()));
-    page.on('response', response => console.log('<<', response.status(), response.url()));
-
     console.log(`Navegando para a URL: ${url}`);
     await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
 
-    await page.waitForLoadState('networkidle', { timeout: 60000 });
-
-    // Auto-scroll the page
-    await page.evaluate(async () => {
-      await new Promise<void>((resolve) => {
-        let totalHeight = 0;
-        const distance = 100;
-        const timer = setInterval(() => {
-          window.scrollBy(0, distance);
-          totalHeight += distance;
-
-          if (totalHeight >= document.body.scrollHeight) {
-            clearInterval(timer);
-            resolve();
-          }
-        }, 100);
-      });
-    });
-
-    // Wait for job listings to load
+    // Esperar pelo seletor específico das vagas
     await page.waitForSelector('li[data-sentry-element="JobPositionLi"]', { state: 'visible', timeout: 60000 });
 
     console.log('Procurando links de vagas...');
-    const jobUrls = await page.$$eval('a[data-sentry-element="NavLink"]', (links, baseUrl) => {
+    const jobUrls = await page.evaluate((baseUrl) => {
+      const links = Array.from(document.querySelectorAll('li[data-sentry-element="JobPositionLi"] a[data-sentry-element="NavLink"]'));
       return links
         .map(link => link.getAttribute('href'))
         .filter((href): href is string => href !== null && href.startsWith('/vagas/'))
