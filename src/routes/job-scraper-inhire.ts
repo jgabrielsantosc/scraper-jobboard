@@ -1,13 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { chromium, Browser, BrowserContext, Page } from 'playwright';
-import { ExpressHandler } from '../types';
+import { chromium } from 'playwright-extra';
+import stealth from 'playwright-extra-plugin-stealth';
 
-async function randomDelay(min = 1000, max = 3000) {
-  const delay = Math.floor(Math.random() * (max - min + 1) + min);
-  await new Promise(resolve => setTimeout(resolve, delay));
-}
+chromium.use(stealth());
 
-export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const scraperJobInhireHandler = async (req: Request, res: Response, next: NextFunction) => {
   const { url } = req.body;
 
   if (!url) {
@@ -15,39 +12,19 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     return;
   }
 
-  let browser: Browser | null = null;
-  let context: BrowserContext | null = null;
-  let page: Page | null = null;
+  let browser;
+  let context;
+  let page;
 
   try {
     console.log('Iniciando o navegador...');
     browser = await chromium.launch({
       headless: true,
-      args: [
-        '--disable-gpu',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-zygote',
-        '--single-process',
-        '--disable-web-security',
-      ],
     });
 
     context = await browser.newContext({
-      ignoreHTTPSErrors: true,
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
-      geolocation: { longitude: -46.6333, latitude: -23.5505 },
-      permissions: ['geolocation'],
-      timezoneId: 'America/Sao_Paulo',
       viewport: { width: 1280, height: 720 },
-    });
-
-    await context.addInitScript(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt'] });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
     });
 
     page = await context.newPage();
@@ -55,48 +32,57 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     // Add event listeners
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
     page.on('pageerror', error => console.error('PAGE ERROR:', error));
-    page.on('response', response => {
-      if (!response.ok()) {
-        console.error(`Network error: ${response.url()} status=${response.status()}`);
-      }
-    });
+    page.on('request', request => console.log('>>', request.method(), request.url()));
+    page.on('response', response => console.log('<<', response.status(), response.url()));
 
     console.log(`Navegando para a URL: ${url}`);
     await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
 
-    await randomDelay();
+    await page.waitForLoadState('networkidle', { timeout: 60000 });
 
-    // Capture screenshot after navigation
-    await page.screenshot({ path: 'after-goto.png', fullPage: true });
+    // Auto-scroll the page
+    await page.evaluate(async () => {
+      await new Promise<void>((resolve) => {
+        let totalHeight = 0;
+        const distance = 100;
+        const timer = setInterval(() => {
+          window.scrollBy(0, distance);
+          totalHeight += distance;
 
-    console.log('Esperando o seletor a[data-sentry-element="NavLink"]...');
-    await page.waitForSelector('a[data-sentry-element="NavLink"]', { state: 'visible', timeout: 60000 });
+          if (totalHeight >= document.body.scrollHeight) {
+            clearInterval(timer);
+            resolve();
+          }
+        }, 100);
+      });
+    });
 
-    await randomDelay();
+    // Wait for job listings to load
+    await page.waitForSelector('li[data-sentry-element="JobPositionLi"]', { state: 'visible', timeout: 60000 });
 
-    // Capture page content
-    const pageContent = await page.content();
-    console.log('Page Content:', pageContent);
-
-    const jobUrls = await page.$$eval(
-      'a[data-sentry-element="NavLink"]',
-      (links, baseUrl) => links.map(link => new URL(link.getAttribute('href') || '', baseUrl).href),
-      url
-    );
+    console.log('Procurando links de vagas...');
+    const jobUrls = await page.$$eval('a[data-sentry-element="NavLink"]', (links, baseUrl) => {
+      return links
+        .map(link => link.getAttribute('href'))
+        .filter((href): href is string => href !== null && href.startsWith('/vagas/'))
+        .map(href => new URL(href, baseUrl).href);
+    }, url);
 
     console.log(`Total de vagas encontradas: ${jobUrls.length}`);
 
     res.json(jobUrls);
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao coletar informações das vagas:', error);
+
     if (page) {
       console.log('Capturando screenshot e conteúdo da página...');
       await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
       const pageContent = await page.content();
       console.log('Conteúdo da página:', pageContent);
     }
-    res.status(500).json({ error: 'Erro ao coletar informações das vagas', details: error.message, stack: error.stack });
+
+    res.status(500).json({ error: 'Erro ao coletar informações das vagas', details: (error as Error).message });
   } finally {
     if (page) await page.close();
     if (context) await context.close();
