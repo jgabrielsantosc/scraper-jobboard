@@ -2,11 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { ExpressHandler } from '../types';
 
-export const scraperJobInhireHandler: ExpressHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+async function randomDelay(min = 1000, max = 3000) {
+  const delay = Math.floor(Math.random() * (max - min + 1) + min);
+  await new Promise(resolve => setTimeout(resolve, delay));
+}
+
+export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { url } = req.body;
 
   if (!url) {
@@ -22,79 +23,80 @@ export const scraperJobInhireHandler: ExpressHandler = async (
     console.log('Iniciando o navegador...');
     browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: [
+        '--disable-gpu',
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-zygote',
+        '--single-process',
+        '--disable-web-security',
+      ],
     });
 
     context = await browser.newContext({
-      userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
-      viewport: { width: 1280, height: 720 },
+      ignoreHTTPSErrors: true,
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+      geolocation: { longitude: -46.6333, latitude: -23.5505 },
+      permissions: ['geolocation'],
       timezoneId: 'America/Sao_Paulo',
-      locale: 'pt-BR',
+      viewport: { width: 1280, height: 720 },
     });
 
-    // Adicionar técnicas anti-detecção
     await context.addInitScript(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt'] });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
     });
 
-    page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
-    await page.waitForLoadState('domcontentloaded', { timeout: 60000 });
+    page = await context.newPage();
 
-    // Capturar logs de console e erros
-    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
-    page.on('pageerror', (err) => console.log('PAGE ERROR:', err));
-    page.on('response', (response) => {
+    // Add event listeners
+    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', error => console.error('PAGE ERROR:', error));
+    page.on('response', response => {
       if (!response.ok()) {
-        console.log(`Network error: ${response.url()} status=${response.status()}`);
+        console.error(`Network error: ${response.url()} status=${response.status()}`);
       }
     });
 
     console.log(`Navegando para a URL: ${url}`);
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 120000 });
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
 
-    // Esperar pelo seletor específico das vagas com tempo de espera maior
-    await page.waitForSelector('li[data-sentry-element="JobPositionLi"]', {
-      state: 'visible',
-      timeout: 120000,
-    });
+    await randomDelay();
 
-    // Simular interações humanas
-    await page.mouse.move(100, 100);
-    await page.mouse.wheel(0, 500);
+    // Capture screenshot after navigation
+    await page.screenshot({ path: 'after-goto.png', fullPage: true });
 
-    console.log('Procurando links de vagas...');
-    const jobUrls = await page.evaluate((baseUrl) => {
-      const links = Array.from(
-        document.querySelectorAll('li[data-sentry-element="JobPositionLi"] a[data-sentry-element="NavLink"]')
-      );
-      return links
-        .map((link) => link.getAttribute('href'))
-        .filter((href): href is string => href !== null && href.startsWith('/vagas/'))
-        .map((href) => new URL(href, baseUrl).href);
-    }, url);
+    console.log('Esperando o seletor a[data-sentry-element="NavLink"]...');
+    await page.waitForSelector('a[data-sentry-element="NavLink"]', { state: 'visible', timeout: 60000 });
+
+    await randomDelay();
+
+    // Capture page content
+    const pageContent = await page.content();
+    console.log('Page Content:', pageContent);
+
+    const jobUrls = await page.$$eval(
+      'a[data-sentry-element="NavLink"]',
+      (links, baseUrl) => links.map(link => new URL(link.getAttribute('href') || '', baseUrl).href),
+      url
+    );
 
     console.log(`Total de vagas encontradas: ${jobUrls.length}`);
 
     res.json(jobUrls);
+
   } catch (error: any) {
     console.error('Erro ao coletar informações das vagas:', error);
-
     if (page) {
       console.log('Capturando screenshot e conteúdo da página...');
       await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
       const pageContent = await page.content();
       console.log('Conteúdo da página:', pageContent);
     }
-
-    res.status(500).json({
-      error: 'Erro ao coletar informações das vagas',
-      details: error.message,
-      stack: error.stack,
-    });
+    res.status(500).json({ error: 'Erro ao coletar informações das vagas', details: error.message, stack: error.stack });
   } finally {
     if (page) await page.close();
     if (context) await context.close();
