@@ -19,5 +19,10 @@ RUN npm run build
 # Expose port 3001
 EXPOSE 3001
 
+# Add these commands for debugging
+RUN playwright --version
+RUN which chromium
+RUN ls -la /usr/bin/chromium*
+
 # Start the application
 CMD ["npm", "run", "serve"]
