@@ -40,7 +40,9 @@ export const scraperJobInhireHandler: ExpressHandler = async (
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
     });
 
-    page = await context.newPage();
+    page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.waitForLoadState('domcontentloaded', { timeout: 60000 });
 
     // Capturar logs de console e erros
     page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));

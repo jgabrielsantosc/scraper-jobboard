@@ -5,3 +5,5 @@ node_modules/
 /playwright/.cache/
 dist/
 .env
+/dist
+/node_modules
