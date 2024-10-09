@@ -1,29 +1,48 @@
-# Use a imagem oficial do Playwright
-FROM mcr.microsoft.com/playwright:v1.48.0-jammy
+FROM node:18-slim
 
-# Instalar dependências adicionais necessárias
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libgbm-dev \
+# Instalar dependências necessárias
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxcb1 \
+    libxkbcommon0 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Definir o diretório de trabalho
-WORKDIR /usr/src/app
+# Definir diretório de trabalho
+WORKDIR /app
 
-# Copiar package.json e package-lock.json
-COPY package.json package-lock.json ./
+# Copiar arquivos do projeto
+COPY package*.json ./
+COPY tsconfig*.json ./
+COPY src ./src
 
 # Instalar dependências
 RUN npm ci
 
-# Copiar o restante do código da aplicação
-COPY . .
+# Instalar navegadores do Playwright
+RUN npx playwright install --with-deps chromium
 
-# Compilar a aplicação
+# Compilar TypeScript
 RUN npm run build
 
-# Expor a porta 3001
+# Expor a porta (ajuste conforme necessário)
 EXPOSE 3001
 
-# Iniciar a aplicação
-CMD ["npm", "run", "serve"] 
+# Comando para iniciar a aplicação
+CMD ["npm", "run", "serve"]
