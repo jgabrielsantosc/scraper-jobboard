@@ -1,28 +1,29 @@
-# Use the official Playwright image
+# Use a imagem oficial do Playwright
 FROM mcr.microsoft.com/playwright:v1.48.0-jammy
 
-# Set working directory
+# Instalar dependências adicionais necessárias
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libgbm-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Definir o diretório de trabalho
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Copiar package.json e package-lock.json
 COPY package.json package-lock.json ./
 
-# Install dependencies
+# Instalar dependências
 RUN npm ci
 
-# Copy the rest of your application code
+# Copiar o restante do código da aplicação
 COPY . .
 
-# Build the application
+# Compilar a aplicação
 RUN npm run build
 
-# Expose port 3001
+# Expor a porta 3001
 EXPOSE 3001
 
-# Add these commands for debugging
-RUN playwright --version
-RUN which chromium
-RUN ls -la /usr/bin/chromium*
-
-# Start the application
-CMD ["npm", "run", "serve"]
+# Iniciar a aplicação
+CMD ["npm", "run", "serve"] 

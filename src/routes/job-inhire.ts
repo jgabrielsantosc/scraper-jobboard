@@ -4,10 +4,14 @@ import { ExpressHandler } from '../types';
 
 async function randomDelay(min = 1000, max = 3000) {
   const delay = Math.floor(Math.random() * (max - min + 1) + min);
-  await new Promise(resolve => setTimeout(resolve, delay));
+  await new Promise((resolve) => setTimeout(resolve, delay));
 }
 
-export const jobInhireHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const jobInhireHandler: ExpressHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   const { url } = req.body;
 
   if (!url) {
@@ -23,41 +27,42 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
     console.log('Iniciando o navegador...');
     browser = await chromium.launch({
       headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-software-rasterizer'
-      ],
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     context = await browser.newContext({
       ignoreHTTPSErrors: true,
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+      userAgent:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
       geolocation: { longitude: -46.6333, latitude: -23.5505 },
       permissions: ['geolocation'],
       timezoneId: 'America/Sao_Paulo',
       viewport: { width: 1280, height: 720 },
+      locale: 'pt-BR',
     });
 
+    // Técnicas anti-detecção
     await context.addInitScript(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt'] });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
     });
 
     page = await context.newPage();
 
+    // Capturar logs e erros
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', (err) => console.log('PAGE ERROR:', err));
+
     console.log('Navegando para a URL:', url);
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 120000 });
     console.log('Página carregada');
 
     await randomDelay();
 
     // Aguarda um seletor que indica que o conteúdo foi carregado
-    const contentSelector = '#root'; // Ajuste conforme necessário
-    await page.waitForSelector(contentSelector, { state: 'attached', timeout: 60000 });
+    const contentSelector = '#root';
+    await page.waitForSelector(contentSelector, { state: 'attached', timeout: 120000 });
     console.log('Conteúdo principal disponível');
 
     await randomDelay();
@@ -76,17 +81,16 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
       return element ? (element as HTMLElement).innerText : '';
     });
 
-    // Processa o conteúdo (se necessário)
+    // Processa o conteúdo
     const cleanContent = content.trim();
 
     // Retorna o conteúdo
     res.json({
       content: cleanContent,
-      formattedContent: cleanContent.split('\n')
+      formattedContent: cleanContent.split('\n'),
     });
 
     console.log('Conteúdo encontrado:', cleanContent.substring(0, 100) + '...');
-
   } catch (error: any) {
     console.error('Erro ao coletar informações da vaga:', error);
     if (page) {
@@ -95,7 +99,11 @@ export const jobInhireHandler: ExpressHandler = async (req: Request, res: Respon
       const pageContent = await page.content();
       console.log('Conteúdo da página:', pageContent);
     }
-    res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: error.message, stack: error.stack });
+    res.status(500).json({
+      error: 'Erro ao coletar informações da vaga',
+      details: error.message,
+      stack: error.stack,
+    });
   } finally {
     if (page) await page.close();
     if (context) await context.close();
