@@ -5,6 +5,9 @@ WORKDIR /usr/src/app
 # Copiar package.json e package-lock.json
 COPY package.json package-lock.json ./
 
+# Copiar o código-fonte
+COPY . .
+
 # Instalar dependênciasr
 RUN npm ci && \
     npm install playwright && \
