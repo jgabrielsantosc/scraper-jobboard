@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import { ExpressHandler } from '../types';
 
-const FIRECRAWL_API_KEY = 'fc-f756fef2af164725b4de3159572d8893';
-const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1/scrape';
+const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
+const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL;
 
 export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { url } = req.body;
@@ -16,8 +16,8 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
   try {
     console.log(`Iniciando a extração de dados da URL: ${url}`);
 
-    const response = await axios.post(FIRECRAWL_API_URL, {
-      url,
+    const response = await axios.post(FIRECRAWL_API_URL!, {
+      url: url!,
       formats: ['links'],
       waitFor: 5000
     }, {
