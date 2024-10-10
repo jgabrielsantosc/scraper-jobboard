@@ -2,9 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import { ExpressHandler } from '../types';
 
-const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
-const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL || 'https://api.firecrawl.dev/v1/scrape';
-
 export const jobInhireHandler: ExpressHandler = async (
   req: Request,
   res: Response,
@@ -16,6 +13,13 @@ export const jobInhireHandler: ExpressHandler = async (
     res.status(400).json({ error: 'URL parameter is required' });
     return;
   }
+
+  const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
+  const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL || 'https://api.firecrawl.dev/v1/scrape';
+
+  console.log('Variáveis de ambiente em job-inhire.ts:');
+  console.log(`FIRECRAWL_API_URL: ${FIRECRAWL_API_URL}`);
+  console.log(`FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY ? 'Definido' : 'Não definido'}`);
 
   if (!FIRECRAWL_API_KEY) {
     console.error('FIRECRAWL_API_KEY não está definido');
@@ -51,7 +55,7 @@ export const jobInhireHandler: ExpressHandler = async (
     res.status(500).json({
       error: 'Erro ao coletar informações da vaga',
       details: error.message,
-      stack: error.stack,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 };
