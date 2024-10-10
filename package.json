@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/api.ts",
-    "build": "tsc -p tsconfig.build.json && npx playwright install chromium && cp src/json/*.json dist/",
+    "build": "tsc -p tsconfig.build.json && cp src/json/*.json dist/",
     "serve": "NODE_ENV=production node dist/api.js",
     "test": "playwright test src/tests",
     "dev": "nodemon --exec ts-node src/api.ts",
