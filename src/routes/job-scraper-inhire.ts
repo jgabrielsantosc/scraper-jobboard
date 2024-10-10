@@ -1,11 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { chromium, Browser, BrowserContext, Page } from 'playwright';
+import axios from 'axios';
 import { ExpressHandler } from '../types';
 
-async function randomDelay(min = 1000, max = 3000) {
-  const delay = Math.floor(Math.random() * (max - min + 1) + min);
-  await new Promise(resolve => setTimeout(resolve, delay));
-}
+const FIRECRAWL_API_KEY = 'fc-f756fef2af164725b4de3159572d8893';
+const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1/scrape';
 
 export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { url } = req.body;
@@ -15,64 +13,42 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
     return;
   }
 
-  let browser: Browser | null = null;
-  let context: BrowserContext | null = null;
-  let page: Page | null = null;
-
   try {
-    console.log('Iniciando o navegador...');
-    browser = await chromium.launch({ 
-      headless: true
-    });
+    console.log(`Iniciando a extração de dados da URL: ${url}`);
 
-    context = await browser.newContext({
-      ignoreHTTPSErrors: true,
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
-      geolocation: { longitude: -46.6333, latitude: -23.5505 },
-      permissions: ['geolocation'],
-      timezoneId: 'America/Sao_Paulo',
-      viewport: { width: 1280, height: 720 },
-    });
-
-    await context.addInitScript(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt'] });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-    });
-
-    page = await context.newPage();
-
-    // Add event listeners
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    page.on('pageerror', error => console.error('PAGE ERROR:', error));
-    page.on('response', response => {
-      if (!response.ok()) {
-        console.error(`Network error: ${response.url()} status=${response.status()}`);
+    const response = await axios.post(FIRECRAWL_API_URL, {
+      url,
+      formats: ['links'],
+      waitFor: 5000
+    }, {
+      headers: {
+        'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
+        'Content-Type': 'application/json'
       }
     });
 
-    console.log(`Navegando para a URL: ${url}`);
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+    const { data } = response.data;
 
-    await randomDelay();
+    if (!data || !data.links) {
+      throw new Error('Dados não encontrados na resposta do Firecrawl');
+    }
 
-    // Capture screenshot after navigation
-    await page.screenshot({ path: 'after-goto.png', fullPage: true });
-
-    console.log('Esperando o seletor a[data-sentry-element="NavLink"]...');
-    await page.waitForSelector('a[data-sentry-element="NavLink"]', { state: 'visible', timeout: 60000 });
-
-    await randomDelay();
-
-    // Capture page content
-    const pageContent = await page.content();
-    console.log('Page Content:', pageContent);
-
-    const jobUrls = await page.$$eval(
-      'a[data-sentry-element="NavLink"]',
-      (links, baseUrl) => links.map(link => new URL(link.getAttribute('href') || '', baseUrl).href),
-      url
-    );
+    const jobUrls = data.links.filter((link: string) => {
+      // Verifica se o link é uma URL válida
+      try {
+        new URL(link);
+      } catch {
+        return false;
+      }
+      
+      // Verifica se o link contém '/vagas/' e não é a página principal de vagas
+      if (!link.includes('/vagas/') || link.endsWith('/vagas')) {
+        console.log(`URL ignorada: ${link}`);
+        return false;
+      }
+      
+      return link.includes('/vagas/') && !link.endsWith('/vagas');
+    });
 
     console.log(`Total de vagas encontradas: ${jobUrls.length}`);
 
@@ -80,16 +56,10 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
 
   } catch (error: any) {
     console.error('Erro ao coletar informações das vagas:', error);
-    if (page) {
-      console.log('Capturando screenshot e conteúdo da página...');
-      await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
-      const pageContent = await page.content();
-      console.log('Conteúdo da página:', pageContent);
-    }
-    res.status(500).json({ error: 'Erro ao coletar informações das vagas', details: error.message, stack: error.stack });
-  } finally {
-    if (page) await page.close();
-    if (context) await context.close();
-    if (browser) await browser.close();
+    res.status(500).json({ 
+      error: 'Erro ao coletar informações das vagas', 
+      details: error.message, 
+      stack: error.stack 
+    });
   }
 };
