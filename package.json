@@ -3,37 +3,34 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node -r tsconfig-paths/register src/api.ts",
+    "start": "ts-node src/api.ts",
     "build": "tsc -p tsconfig.build.json && echo 'TypeScript compilation complete' && ls -R dist && cp src/json/*.json dist/",
-    "serve": "node dist/api.js",
-    "install-browsers": "playwright install chromium firefox webkit",
-    "build:digitalocean": "npm ci && npm run install-browsers && npm run build --verbose",
+    "serve": "NODE_ENV=production PLAYWRIGHT_BROWSERS_PATH=0 node dist/api.js",
+    "test": "playwright test src/tests",
     "postbuild": "ls -R dist",
+    "build:digitalocean": "npm ci && npm run install-system-deps && npm run install-browsers && npm run build --verbose",
     "dev": "nodemon --exec ts-node src/api.ts",
-    "start:prod": "node dist/api.js"
+    "start:prod": "PLAYWRIGHT_BROWSERS_PATH=0 node dist/api.js",
+    "install-browsers": "playwright install --with-deps chromium firefox webkit",
+    "install-system-deps": "playwright install-deps"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@types/selenium-webdriver": "^4.1.26",
     "axios": "^1.7.7",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "html-to-text": "^9.0.5",
-    "playwright": "^1.48.0",
-    "playwright-extra": "^4.3.6",
-    "playwright-extra-plugin-stealth": "^0.0.1",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "playwright": "^1.47.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "selenium-webdriver": "^4.25.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0",
+    "@playwright/test": "^1.47.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",
@@ -43,11 +40,11 @@
     "@types/swagger-ui-express": "^4.1.6",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "nodemon": "^3.0.3",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "nodemon": "^3.0.3",
+    "playwright": "^1.47.2"
   },
   "engines": {
     "node": ">=18.x"
