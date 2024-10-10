@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import { ExpressHandler } from '../types';
 
-const FIRECRAWL_API_KEY = 'fc-f756fef2af164725b4de3159572d8893';
-const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1/scrape';
+const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
+const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL || 'https://api.firecrawl.dev/v1/scrape';
 
 export const jobInhireHandler: ExpressHandler = async (
   req: Request,
@@ -17,11 +17,17 @@ export const jobInhireHandler: ExpressHandler = async (
     return;
   }
 
+  if (!FIRECRAWL_API_KEY) {
+    console.error('FIRECRAWL_API_KEY não está definido');
+    res.status(500).json({ error: 'Erro de configuração do servidor' });
+    return;
+  }
+
   try {
     console.log(`Iniciando a extração de dados da URL: ${url}`);
 
     const response = await axios.post(FIRECRAWL_API_URL, {
-      url,
+      url: url,
       formats: ['markdown'],
       waitFor: 5000
     }, {

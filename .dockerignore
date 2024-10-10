@@ -5,3 +5,8 @@ src/tests
 .gitignore
 README.md
 .env
+.dockerignore
+*.md
+*.log
+.vscode
+.idea
