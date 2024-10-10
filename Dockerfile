@@ -3,13 +3,15 @@ FROM mcr.microsoft.com/playwright:v1.48.0-jammy
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Copiar arquivos do projeto
+# Copiar apenas o package.json e package-lock.json (se existir)
 COPY package*.json ./
+
+# Remover o package-lock.json existente (se houver) e gerar um novo
+RUN rm -f package-lock.json && npm install
+
+# Copiar o resto dos arquivos do projeto
 COPY tsconfig*.json ./
 COPY src ./src
-
-# Instalar dependências
-RUN npm ci
 
 # Compilar TypeScript
 RUN npm run build
