@@ -13,7 +13,6 @@ exports.jobWorkableHandler = void 0;
 const playwright_1 = require("playwright");
 const html_to_text_1 = require("html-to-text");
 const jobWorkableHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d, _e;
     const { url } = req.body;
     if (!url) {
         res.status(400).json({ error: 'URL não fornecida' });
@@ -26,28 +25,36 @@ const jobWorkableHandler = (req, res, next) => __awaiter(void 0, void 0, void 0,
         const page = yield context.newPage();
         yield page.goto(url);
         yield page.waitForLoadState('networkidle');
-        // Usando operador de coalescência nula (??)
-        const title = (_a = (yield page.locator('h1[data-ui="job-title"], h3[data-ui="job-title"]').textContent())) !== null && _a !== void 0 ? _a : '';
-        const workModel = (_b = (yield page.locator('span[data-ui="job-workplace"] strong').textContent())) !== null && _b !== void 0 ? _b : '';
-        const typeJob = (_c = (yield page.locator('span[data-ui="job-type"]').textContent())) !== null && _c !== void 0 ? _c : '';
-        const location = (_d = (yield page.locator('div[data-ui="job-location-tooltip"] span, div[data-ui="job-location"] [data-ellipsis-element="true"], div.styles--1Sarc.styles--Xn8hR [data-ellipsis-element="true"]').textContent())) !== null && _d !== void 0 ? _d : '';
-        const descriptionHtml = (_e = (yield page.locator('section[data-ui="job-description"]').innerHTML())) !== null && _e !== void 0 ? _e : '';
-        const description = (0, html_to_text_1.convert)(descriptionHtml, {
-            wordwrap: false,
+        // Capturar todo o conteúdo do body
+        const bodyContent = yield page.evaluate(() => {
+            return document.body.innerHTML;
+        });
+        // Converter o HTML para texto com espaçamento
+        const textContent = (0, html_to_text_1.convert)(bodyContent, {
+            wordwrap: 130,
+            preserveNewlines: true,
             selectors: [
+                { selector: 'h1', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
+                { selector: 'h2', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
+                { selector: 'h3', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
+                { selector: 'p', options: { prefix: '\n', suffix: '\n' } },
+                { selector: 'br', options: { format: 'inline', prefix: '\n' } },
+                { selector: 'ul', options: { itemPrefix: '\n • ' } },
+                { selector: 'ol', options: { itemPrefix: '\n  ' } },
                 { selector: 'a', options: { ignoreHref: true } },
                 { selector: 'img', format: 'skip' }
             ]
         });
-        const jobInfo = {
-            title: title.trim(),
-            workModel: workModel.trim(),
-            typeJob: typeJob.trim(),
-            location: location.trim(),
-            description: description.trim(),
-        };
+        // Limpar espaços em branco excessivos
+        const cleanedContent = textContent
+            .replace(/\n\s+\n/g, '\n\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
         yield browser.close();
-        res.json(jobInfo);
+        res.json({
+            content: cleanedContent,
+            formattedContent: cleanedContent.split('\n')
+        });
     }
     catch (error) {
         console.error('Erro ao coletar informações da vaga:', error);

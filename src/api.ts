@@ -8,8 +8,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '/usr/local/share/playwright';
+
 const app = express();
-const port = Number(process.env.PORT) || 3001;
+const port = process.env.PORT || 3001;
 
 app.use(express.json());
 
@@ -133,17 +135,21 @@ app.post('/job-details', handleJobDetailsRequest);
 // Rota única para processar qualquer job board
 app.post('/scraper-job', unifiedUrlScraper);
 
-const server = app.listen(port, () => {
-  console.log(`API rodando em http://localhost:${port}`);
-}).on('error', (err: NodeJS.ErrnoException) => {
-  if (err.code === 'EADDRINUSE') {
-    console.log(`Porta ${port} está em uso, tentando a próxima...`);
-    server.close();
-    const nextPort = port + 1;
-    app.listen(nextPort, () => {
-      console.log(`API rodando em http://localhost:${nextPort}`);
-    });
+// Middleware de tratamento de erros
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    res.status(400).json({ error: 'JSON inválido' });
   } else {
-    console.error('Erro ao iniciar o servidor:', err);
+    console.error('Erro:', err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
+
+const server = app.listen(port, () => {
+  console.log(`API rodando em http://localhost:${port}`);
+});
+
+console.log('Iniciando aplicação...');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PLAYWRIGHT_BROWSERS_PATH:', process.env.PLAYWRIGHT_BROWSERS_PATH);
+console.log('PORT:', process.env.PORT);

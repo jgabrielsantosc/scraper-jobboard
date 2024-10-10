@@ -21,18 +21,8 @@ export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res:
 
   try {
     console.log('Iniciando o navegador...');
-    browser = await chromium.launch({
-      headless: true,
-      args: [
-        '--disable-gpu',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-zygote',
-        '--single-process',
-        '--disable-web-security',
-      ],
+    browser = await chromium.launch({ 
+      headless: true
     });
 
     context = await browser.newContext({

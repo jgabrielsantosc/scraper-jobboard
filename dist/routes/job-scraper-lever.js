@@ -9,14 +9,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.scraperJobLeverHandler = void 0;
+exports.scraperJobLeverHandler = exports.scraperJobLever = void 0;
 const playwright_1 = require("playwright");
-const scraperJobLeverHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { url } = req.body;
-    if (!url) {
-        res.status(400).json({ error: 'URL não fornecida' });
-        return;
-    }
+const scraperJobLever = (url) => __awaiter(void 0, void 0, void 0, function* () {
     let browser;
     try {
         browser = yield playwright_1.chromium.launch({ headless: true });
@@ -24,48 +19,38 @@ const scraperJobLeverHandler = (req, res, next) => __awaiter(void 0, void 0, voi
         const page = yield context.newPage();
         yield page.goto(url);
         yield page.waitForLoadState('networkidle');
-        const jobListings = yield page.evaluate(() => {
-            const jobGroups = document.querySelectorAll('.postings-group');
-            const jobs = [];
-            jobGroups.forEach((group) => {
-                var _a, _b;
-                const area = ((_b = (_a = group.querySelector('.large-category-header')) === null || _a === void 0 ? void 0 : _a.textContent) === null || _b === void 0 ? void 0 : _b.trim()) || '';
-                const jobCards = group.querySelectorAll('.posting');
-                jobCards.forEach((card) => {
-                    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
-                    const title = ((_b = (_a = card.querySelector('[data-qa="posting-name"]')) === null || _a === void 0 ? void 0 : _a.textContent) === null || _b === void 0 ? void 0 : _b.trim()) || '';
-                    const url_job = ((_c = card.querySelector('.posting-btn-submit')) === null || _c === void 0 ? void 0 : _c.getAttribute('href')) || '';
-                    const work_model = ((_e = (_d = card.querySelector('.workplaceTypes')) === null || _d === void 0 ? void 0 : _d.textContent) === null || _e === void 0 ? void 0 : _e.trim().replace('—', '').trim()) || '';
-                    const type_job = ((_g = (_f = card.querySelector('.commitment')) === null || _f === void 0 ? void 0 : _f.textContent) === null || _g === void 0 ? void 0 : _g.trim()) || '';
-                    const location = ((_j = (_h = card.querySelector('.location')) === null || _h === void 0 ? void 0 : _h.textContent) === null || _j === void 0 ? void 0 : _j.trim()) || '';
-                    jobs.push({
-                        area,
-                        title,
-                        url_job,
-                        work_model,
-                        type_job,
-                        location
-                    });
-                });
-            });
-            return jobs;
+        const jobUrls = yield page.evaluate(() => {
+            const jobCards = document.querySelectorAll('.posting');
+            return Array.from(jobCards)
+                .map(card => { var _a; return ((_a = card.querySelector('.posting-btn-submit')) === null || _a === void 0 ? void 0 : _a.getAttribute('href')) || ''; })
+                .filter(url => url !== '');
         });
-        yield browser.close();
-        if (jobListings.length === 0) {
-            res.status(404).json({ error: 'Nenhuma vaga encontrada' });
-        }
-        else {
-            res.json({ totalVagas: jobListings.length, vagas: jobListings });
-        }
+        return jobUrls;
     }
     catch (error) {
-        console.error('Erro ao coletar informações das vagas:', error);
-        res.status(500).json({ error: 'Erro ao coletar informações das vagas' });
+        console.error('Erro ao coletar URLs das vagas:', error);
+        throw error;
     }
     finally {
         if (browser) {
             yield browser.close();
         }
+    }
+});
+exports.scraperJobLever = scraperJobLever;
+const scraperJobLeverHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { url } = req.body;
+    if (!url) {
+        res.status(400).json({ error: 'URL não fornecida' });
+        return;
+    }
+    try {
+        const jobUrls = yield (0, exports.scraperJobLever)(url);
+        res.json({ urls: jobUrls });
+    }
+    catch (error) {
+        console.error('Erro ao coletar URLs das vagas:', error);
+        res.status(500).json({ error: 'Erro ao coletar URLs das vagas' });
     }
 });
 exports.scraperJobLeverHandler = scraperJobLeverHandler;

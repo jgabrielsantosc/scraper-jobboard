@@ -11,59 +11,43 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.scraperJobGupy = void 0;
 const playwright_1 = require("playwright");
-const scraperJobGupy = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { url } = req.body;
-    if (!url) {
-        res.status(400).json({ error: 'URL não fornecida' });
-        return;
-    }
+const scraperJobGupy = (url) => __awaiter(void 0, void 0, void 0, function* () {
+    const jobUrls = [];
+    const browser = yield playwright_1.chromium.launch({ headless: true });
+    const context = yield browser.newContext();
+    const page = yield context.newPage();
     try {
-        const browser = yield playwright_1.chromium.launch();
-        const context = yield browser.newContext();
-        const page = yield context.newPage();
         yield page.goto(url);
         yield page.waitForLoadState('networkidle');
-        let todasAsVagas = [];
-        let paginaAtual = 1;
         while (true) {
-            const vagasDaPagina = yield coletarInformacoesDaPagina(page);
-            todasAsVagas = todasAsVagas.concat(vagasDaPagina);
+            const newUrls = yield coletarUrlsDaPagina(page);
+            jobUrls.push(...newUrls);
             const botaoProxima = page.locator('[data-testid="pagination-next-button"]');
             const botaoProximaDesabilitado = yield botaoProxima.getAttribute('disabled');
             if (botaoProximaDesabilitado === null) {
                 yield botaoProxima.click();
                 yield page.waitForLoadState('networkidle');
-                paginaAtual++;
             }
             else {
                 break;
             }
         }
-        yield browser.close();
-        res.json({ totalVagas: todasAsVagas.length, vagas: todasAsVagas });
+        return jobUrls;
     }
-    catch (error) {
-        console.error('Erro ao coletar informações das vagas:', error);
-        res.status(500).json({ error: 'Erro ao coletar informações das vagas' });
+    finally {
+        yield browser.close();
     }
 });
 exports.scraperJobGupy = scraperJobGupy;
-function coletarInformacoesDaPagina(page) {
+function coletarUrlsDaPagina(page) {
     return __awaiter(this, void 0, void 0, function* () {
-        const vagas = yield page.locator('[data-testid="job-list__listitem"]').all();
-        const informacoes = [];
-        for (const vaga of vagas) {
-            const titulo = yield vaga.locator('.sc-f5007364-4').textContent();
-            const localizacao = yield vaga.locator('.sc-f5007364-5').textContent();
-            const tipo = yield vaga.locator('.sc-f5007364-6').textContent();
-            const link = yield vaga.locator('[data-testid="job-list__listitem-href"]').getAttribute('href');
-            informacoes.push({
-                titulo: titulo === null || titulo === void 0 ? void 0 : titulo.trim(),
-                localizacao: localizacao === null || localizacao === void 0 ? void 0 : localizacao.trim(),
-                tipo: tipo === null || tipo === void 0 ? void 0 : tipo.trim(),
-                link: link ? `${new URL(page.url()).origin}${link}` : undefined
-            });
-        }
-        return informacoes;
+        const baseUrl = new URL(page.url()).origin;
+        return page.evaluate((baseUrl) => {
+            const links = document.querySelectorAll('[data-testid="job-list__listitem-href"]');
+            return Array.from(links).map(link => {
+                const href = link.getAttribute('href');
+                return href ? new URL(href, baseUrl).href : null;
+            }).filter(Boolean);
+        }, baseUrl);
     });
 }
