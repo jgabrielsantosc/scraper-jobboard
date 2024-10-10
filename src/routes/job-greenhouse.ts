@@ -16,17 +16,21 @@ export const jobGreenhouseHandler: ExpressHandler = async (req: Request, res: Re
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    console.log(`Navegando para a URL: ${url}`);
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
 
-    const links = await page.evaluate(() => {
-      const jobLinks = document.querySelectorAll('a[href*="/jobs/"]');
-      return Array.from(jobLinks).map(link => link.getAttribute('href')).filter(Boolean) as string[];
+    const bodyContent = await page.evaluate(() => {
+      const body = document.body;
+      return body.innerText;
     });
 
-    await browser.close();
+    console.log('Conteúdo do body coletado');
 
-    // Retornar apenas os links
-    res.json(links);
+    if (!bodyContent) {
+      throw new Error('Não foi possível extrair o conteúdo da página');
+    }
+
+    res.json({ content: bodyContent });
   } catch (error) {
     console.error('Erro ao coletar informações da vaga:', error);
     res.status(500).json({ error: 'Erro ao coletar informações da vaga' });

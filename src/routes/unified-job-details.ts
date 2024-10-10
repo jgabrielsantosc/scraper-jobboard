@@ -39,6 +39,11 @@ export const handleJobDetailsRequest: ExpressHandler = async (req: Request, res:
 
   console.log(`Job board identificado: ${jobBoard}`);
 
-  const handler = jobBoardHandlers[jobBoard];
-  await handler(req, res, next);
+  try {
+    const handler = jobBoardHandlers[jobBoard];
+    await handler(req, res, next);
+  } catch (error) {
+    console.error(`Erro ao processar a vaga do ${jobBoard}:`, error);
+    res.status(500).json({ error: `Erro ao processar a vaga do ${jobBoard}` });
+  }
 };
