@@ -17,6 +17,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@mendable/firecrawl-js": "^0.0.36",
     "@types/selenium-webdriver": "^4.1.26",
     "axios": "^1.7.7",
     "cheerio": "^1.0.0",
@@ -31,7 +32,6 @@
     "react-dom": "^18.3.1",
     "selenium-webdriver": "^4.25.0",
     "swagger-ui-express": "^5.0.1",
-    "@mendable/firecrawl-js": "^0.0.36",
     "uuid": "^9.0.1",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.23.3"
