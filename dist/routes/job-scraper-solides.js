@@ -12,35 +12,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.scraperJobSolidesHandler = void 0;
+exports.scraperJobSolides = void 0;
 const axios_1 = __importDefault(require("axios"));
-const scraperJobSolidesHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { url } = req.body;
-    if (!url) {
-        res.status(400).json({ error: 'URL não fornecida' });
-        return;
+const scraperJobSolides = (url) => __awaiter(void 0, void 0, void 0, function* () {
+    const companyName = new URL(url).hostname.split('.')[0];
+    const baseUrl = `https://${companyName}.vagas.solides.com.br/vaga/`;
+    const firstPageResponse = yield axios_1.default.get(`https://apigw.solides.com.br/jobs/v3/home/vacancy?title=&locations=&take=8&page=1&slug=${companyName}`);
+    const totalPages = firstPageResponse.data.data.totalPages;
+    const allJobs = [];
+    for (let page = 1; page <= totalPages; page++) {
+        const response = yield axios_1.default.get(`https://apigw.solides.com.br/jobs/v3/home/vacancy?title=&locations=&take=8&page=${page}&slug=${companyName}`);
+        allJobs.push(...response.data.data.data);
     }
-    try {
-        const companyName = new URL(url).hostname.split('.')[0];
-        const firstPageResponse = yield axios_1.default.get(`https://apigw.solides.com.br/jobs/v3/home/vacancy?title=&locations=&take=8&page=1&slug=${companyName}`);
-        const totalPages = firstPageResponse.data.data.totalPages;
-        const allJobs = [];
-        for (let page = 1; page <= totalPages; page++) {
-            const response = yield axios_1.default.get(`https://apigw.solides.com.br/jobs/v3/home/vacancy?title=&locations=&take=8&page=${page}&slug=${companyName}`);
-            allJobs.push(...response.data.data.data);
-        }
-        const baseUrl = `https://${companyName}.vagas.solides.com.br/vaga/`;
-        const jobUrls = allJobs.map(job => `${baseUrl}${job.id}`);
-        if (jobUrls.length === 0) {
-            res.status(404).json({ error: 'Nenhuma vaga encontrada' });
-        }
-        else {
-            res.json({ totalVagas: jobUrls.length, vagas: jobUrls });
-        }
-    }
-    catch (error) {
-        console.error('Erro ao coletar informações das vagas:', error);
-        res.status(500).json({ error: 'Erro ao coletar informações das vagas' });
-    }
+    const jobUrls = allJobs.map(job => `${baseUrl}${job.id}`);
+    return jobUrls;
 });
-exports.scraperJobSolidesHandler = scraperJobSolidesHandler;
+exports.scraperJobSolides = scraperJobSolides;

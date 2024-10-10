@@ -11,67 +11,96 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.jobInhireHandler = void 0;
 const playwright_1 = require("playwright");
+function randomDelay() {
+    return __awaiter(this, arguments, void 0, function* (min = 1000, max = 3000) {
+        const delay = Math.floor(Math.random() * (max - min + 1) + min);
+        yield new Promise((resolve) => setTimeout(resolve, delay));
+    });
+}
 const jobInhireHandler = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { url } = req.body;
     if (!url) {
         res.status(400).json({ error: 'URL parameter is required' });
         return;
     }
-    let browser;
+    let browser = null;
+    let context = null;
+    let page = null;
     try {
-        browser = yield playwright_1.chromium.launch({ headless: true });
-        const context = yield browser.newContext({
-            ignoreHTTPSErrors: true,
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
-                'Chrome/85.0.4183.83 Safari/537.36',
-            geolocation: { longitude: -46.6333, latitude: -23.5505 }, // Coordenadas de São Paulo, Brasil
-            permissions: ['geolocation'],
-            timezoneId: 'America/Sao_Paulo', // Fuso horário de São Paulo
+        console.log('Iniciando o navegador...');
+        browser = yield playwright_1.chromium.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
-        const page = yield context.newPage();
-        // Navegar para a URL fornecida
-        yield page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        // Aguarde os elementos necessários carregarem
-        yield page.waitForSelector('h1[data-component-name="Jumbo"]', { timeout: 60000 });
-        yield page.waitForSelector('span[data-component-name="Text"]', { timeout: 60000 });
-        yield page.waitForSelector('.css-i3pbo.e5r6srz1', { timeout: 60000 });
-        // Extrair as informações da vaga
-        const title = yield page.locator('h1[data-component-name="Jumbo"]').textContent();
-        const workModel = yield page.locator('span[data-component-name="Text"]').first().textContent();
-        const location = yield page.locator('span[data-component-name="Text"]').nth(1).textContent();
-        const descricao = yield page.locator('.css-i3pbo.e5r6srz1').first().textContent();
-        console.log('Título:', title);
-        console.log('Modelo de Trabalho:', workModel);
-        console.log('Localização:', location);
-        console.log('Descrição:', descricao);
-        // Verificar se as informações foram coletadas
-        if (!title && !workModel && !location && !descricao) {
-            res.status(404).json({ error: 'Não foi possível encontrar informações da vaga' });
-        }
-        else {
-            const jobInfo = {
-                title: title ? title.trim() : '',
-                workModel: workModel ? workModel.trim() : '',
-                location: location ? location.trim() : '',
-                description: descricao ? descricao.trim() : '',
-            };
-            res.json(jobInfo);
-        }
+        context = yield browser.newContext({
+            ignoreHTTPSErrors: true,
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+            geolocation: { longitude: -46.6333, latitude: -23.5505 },
+            permissions: ['geolocation'],
+            timezoneId: 'America/Sao_Paulo',
+            viewport: { width: 1280, height: 720 },
+            locale: 'pt-BR',
+        });
+        // Técnicas anti-detecção
+        yield context.addInitScript(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt'] });
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+        });
+        page = yield context.newPage();
+        // Capturar logs e erros
+        page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+        page.on('pageerror', (err) => console.log('PAGE ERROR:', err));
+        console.log('Navegando para a URL:', url);
+        yield page.goto(url, { waitUntil: 'networkidle', timeout: 120000 });
+        console.log('Página carregada');
+        yield randomDelay();
+        // Aguarda um seletor que indica que o conteúdo foi carregado
+        const contentSelector = '#root';
+        yield page.waitForSelector(contentSelector, { state: 'attached', timeout: 120000 });
+        console.log('Conteúdo principal disponível');
+        yield randomDelay();
+        // Simula comportamento humano
+        yield page.mouse.move(100, 100);
+        yield page.mouse.down();
+        yield page.mouse.move(200, 200);
+        yield page.mouse.up();
+        yield randomDelay();
+        // Avalia o conteúdo da página
+        const content = yield page.evaluate(() => {
+            const element = document.querySelector('#root');
+            return element ? element.innerText : '';
+        });
+        // Processa o conteúdo
+        const cleanContent = content.trim();
+        // Retorna o conteúdo
+        res.json({
+            content: cleanContent,
+            formattedContent: cleanContent.split('\n'),
+        });
+        console.log('Conteúdo encontrado:', cleanContent.substring(0, 100) + '...');
     }
     catch (error) {
         console.error('Erro ao coletar informações da vaga:', error);
-        if (error instanceof Error) {
-            res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: error.message });
+        if (page) {
+            console.log('Capturando screenshot e conteúdo da página...');
+            yield page.screenshot({ path: 'error-screenshot.png', fullPage: true });
+            const pageContent = yield page.content();
+            console.log('Conteúdo da página:', pageContent);
         }
-        else {
-            res.status(500).json({ error: 'Erro ao coletar informações da vaga', details: 'Erro desconhecido' });
-        }
-        return;
+        res.status(500).json({
+            error: 'Erro ao coletar informações da vaga',
+            details: error.message,
+            stack: error.stack,
+        });
     }
     finally {
-        if (browser) {
+        if (page)
+            yield page.close();
+        if (context)
+            yield context.close();
+        if (browser)
             yield browser.close();
-        }
     }
 });
 exports.jobInhireHandler = jobInhireHandler;

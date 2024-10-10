@@ -27,3 +27,5 @@ EXPOSE 3001
 
 # Comando para iniciar a aplicação
 CMD ["npm", "run", "serve"]
+
+RUN mkdir -p /ms-playwright && cp -r /usr/src/app/node_modules/playwright-core/.local-browsers/* /ms-playwright/

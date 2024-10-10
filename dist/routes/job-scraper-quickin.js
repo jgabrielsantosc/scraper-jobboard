@@ -24,22 +24,9 @@ const scraperJobQuickinHandler = (req, res, next) => __awaiter(void 0, void 0, v
         const page = yield context.newPage();
         yield page.goto(url);
         yield page.waitForLoadState('networkidle');
-        const jobCards = yield page.$$('tr[data-v-4491386a]');
-        const jobs = [];
-        for (const jobCard of jobCards) {
-            const title = yield jobCard.$eval('a.text-dark', el => { var _a; return (_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim(); });
-            const link = yield jobCard.$eval('a.text-dark', el => el.href);
-            const location = yield jobCard.$eval('td span[data-v-4491386a]', el => { var _a; return (_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim(); });
-            const workModel = yield jobCard.$eval('td span.badge-secondary', el => { var _a; return (_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim(); });
-            jobs.push({ title, link, location, work_model: workModel });
-        }
+        const jobUrls = yield page.$$eval('tr[data-v-4491386a] a.text-dark', links => links.map(link => link.href));
         yield browser.close();
-        if (jobs.length === 0) {
-            res.status(404).json({ error: 'Nenhuma vaga encontrada' });
-        }
-        else {
-            res.json({ totalVagas: jobs.length, vagas: jobs });
-        }
+        res.json({ totalVagas: jobUrls.length, vagas: jobUrls });
     }
     catch (error) {
         console.error('Erro ao coletar informações das vagas:', error);
