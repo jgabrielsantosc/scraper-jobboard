@@ -11,40 +11,45 @@ import { scraperJobGreenhouse } from './job-scraper-greenhouse';
 
 type JobBoardScraper = ExpressHandler;
 
-const jobBoardScrapers: Record<string, JobBoardScraper> = {
-    'gupy': (req, res, next) => scraperJobGupy(req.body.url)
-      .then(result => { res.json(result); return; }) // Adiciona return
-      .catch(next),
-    'abler': scraperJobAbler,
-    'lever': (req, res, next) => scraperJobLever(req.body.url)
-      .then(result => { res.json(result); return; }) // Adiciona return
-      .catch(next),
-    'inhire': scraperJobInhire,
-    'quickin': scraperJobQuickin,
-    'solides': (req, res, next) => scraperJobSolides(req.body.url)
-      .then(result => { res.json(result); return; }) // Adiciona return
-      .catch(next),
-    'workable': scraperJobWorkable,
-    'greenhouse': (req, res, next) => scraperJobGreenhouse(req.body.url)
-      .then(result => { res.json(result); return; }) // Adiciona return
-      .catch(next),
+// Função auxiliar para criar um wrapper para scrapers que retornam Promises
+const createScraperWrapper = (scraper: (url: string) => Promise<any>): JobBoardScraper => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await scraper(req.body.url);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
   };
+};
+
+const jobBoardScrapers: Record<string, JobBoardScraper> = {
+    'gupy.io': createScraperWrapper(scraperJobGupy),
+    'abler': scraperJobAbler,
+    'lever': createScraperWrapper(scraperJobLever),
+    'inhire': scraperJobInhire, // Alterado de 'inhire.app' para 'inhire'
+    'quickin': scraperJobQuickin,
+    'solides': createScraperWrapper(scraperJobSolides),
+    'workable': scraperJobWorkable,
+    'greenhouse': createScraperWrapper(scraperJobGreenhouse),
+};
 
 export const unifiedUrlScraper: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { url } = req.body;
+    const { url } = req.body;
 
-  if (!url) {
-    res.status(400).json({ error: 'URL não fornecida' });
-    return;
-  }
+    if (!url) {
+        res.status(400).json({ error: 'URL não fornecida' });
+        return;
+    }
 
-  const jobBoard = Object.keys(jobBoardScrapers).find(key => url.includes(key));
-  
-  if (!jobBoard) {
-    res.status(400).json({ error: 'Job board não suportado' });
-    return;
-  }
+    const jobBoard = Object.keys(jobBoardScrapers).find(key => url.toLowerCase().includes(key));
+    
+    if (!jobBoard) {
+        res.status(400).json({ error: 'Job board não suportado' });
+        return;
+    }
 
-  const handler = jobBoardScrapers[jobBoard];
-  await handler(req, res, next);
+    console.log(`Job board identificado: ${jobBoard}`);
+    const handler = jobBoardScrapers[jobBoard];
+    await handler(req, res, next);
 };

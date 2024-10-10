@@ -11,23 +11,25 @@ import { jobWorkableHandler } from './job-workable';
 
 // Mapeamento de URLs para handlers
 const jobBoardHandlers: { [key: string]: ExpressHandler } = {
-  'inhire': jobInhireHandler,
-  'gupy': jobGupyHandler,
+  'inhire.app': jobInhireHandler,
+  'gupy.io': jobGupyHandler,
   'abler': jobAblerHandler,
-  'lever': jobLeverHandler,
+  'lever.co': jobLeverHandler,
   'quickin': jobQuickinHandler,
   'solides': jobSolidesHandler,
-  'greenhouse': jobGreenhouseHandler,
-  'workable': jobWorkableHandler,
+  'greenhouse.io': jobGreenhouseHandler,
+  'workable.com': jobWorkableHandler,
 };
 
 // Função para identificar o job board e chamar o handler apropriado
-const handleJobDetailsRequest: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const handleJobDetailsRequest: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { url } = req.body;
   if (!url) {
     res.status(400).json({ error: 'URL não fornecida' });
     return;
   }
+
+  console.log(`Processando URL: ${url}`);
 
   const jobBoard = Object.keys(jobBoardHandlers).find(key => url.includes(key));
   if (!jobBoard) {
@@ -35,8 +37,8 @@ const handleJobDetailsRequest: ExpressHandler = async (req: Request, res: Respon
     return;
   }
 
+  console.log(`Job board identificado: ${jobBoard}`);
+
   const handler = jobBoardHandlers[jobBoard];
   await handler(req, res, next);
 };
-
-export { handleJobDetailsRequest };
