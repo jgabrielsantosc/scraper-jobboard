@@ -23,6 +23,20 @@ const createScraperWrapper = (scraper: (url: string) => Promise<any>): JobBoardS
   };
 };
 
+const greenhouseWrapper = (url: string) => {
+  return new Promise((resolve, reject) => {
+    const req = { body: { url } } as Request;
+    const res = {
+      json: (data: any) => resolve(data),
+      status: (code: number) => ({
+        json: (data: any) => reject(data)
+      })
+    } as unknown as Response;
+
+    scraperJobGreenhouse(req, res, () => {});
+  });
+};
+
 const jobBoardScrapers: Record<string, JobBoardScraper> = {
     'gupy.io': createScraperWrapper(scraperJobGupy),
     'abler': scraperJobAbler,
@@ -31,7 +45,7 @@ const jobBoardScrapers: Record<string, JobBoardScraper> = {
     'quickin': scraperJobQuickin,
     'solides': createScraperWrapper(scraperJobSolides),
     'workable': scraperJobWorkable,
-    'greenhouse': createScraperWrapper(scraperJobGreenhouse),
+    'greenhouse': createScraperWrapper(greenhouseWrapper),
 };
 
 export const unifiedUrlScraper: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
