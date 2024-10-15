@@ -22,14 +22,17 @@ const jobGreenhouseHandler = (req, res, next) => __awaiter(void 0, void 0, void 
         browser = yield playwright_1.chromium.launch({ headless: true });
         const context = yield browser.newContext();
         const page = yield context.newPage();
-        yield page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        const links = yield page.evaluate(() => {
-            const jobLinks = document.querySelectorAll('a[href*="/jobs/"]');
-            return Array.from(jobLinks).map(link => link.getAttribute('href')).filter(Boolean);
+        console.log(`Navegando para a URL: ${url}`);
+        yield page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+        const bodyContent = yield page.evaluate(() => {
+            const body = document.body;
+            return body.innerText;
         });
-        yield browser.close();
-        // Retornar apenas os links
-        res.json(links);
+        console.log('Conteúdo do body coletado');
+        if (!bodyContent) {
+            throw new Error('Não foi possível extrair o conteúdo da página');
+        }
+        res.json({ content: bodyContent });
     }
     catch (error) {
         console.error('Erro ao coletar informações da vaga:', error);

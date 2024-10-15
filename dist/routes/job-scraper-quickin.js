@@ -25,8 +25,7 @@ const scraperJobQuickinHandler = (req, res, next) => __awaiter(void 0, void 0, v
         yield page.goto(url);
         yield page.waitForLoadState('networkidle');
         const jobUrls = yield page.$$eval('tr[data-v-4491386a] a.text-dark', links => links.map(link => link.href));
-        yield browser.close();
-        res.json({ totalVagas: jobUrls.length, vagas: jobUrls });
+        res.json(jobUrls);
     }
     catch (error) {
         console.error('Erro ao coletar informações das vagas:', error);

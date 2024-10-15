@@ -8,7 +8,13 @@ const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const unified_job_details_1 = require("./routes/unified-job-details");
 const urls_scraper_1 = require("./routes/urls-scraper");
 const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
+const path_1 = __importDefault(require("path"));
+// Carrega as variáveis de ambiente do arquivo .env
+dotenv_1.default.config({ path: path_1.default.resolve(__dirname, '../.env') });
+console.log('Variáveis de ambiente em api.ts:');
+console.log('FIRECRAWL_API_KEY:', process.env.FIRECRAWL_API_KEY ? 'Definido' : 'Não definido');
+console.log('FIRECRAWL_API_URL:', process.env.FIRECRAWL_API_URL);
+process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '/usr/local/share/playwright';
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3001;
 app.use(express_1.default.json());
@@ -128,6 +134,16 @@ app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.de
 app.post('/job-details', unified_job_details_1.handleJobDetailsRequest);
 // Rota única para processar qualquer job board
 app.post('/scraper-job', urls_scraper_1.unifiedUrlScraper);
+// Middleware de tratamento de erros
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && 'body' in err) {
+        res.status(400).json({ error: 'JSON inválido' });
+    }
+    else {
+        console.error('Erro:', err);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
 const server = app.listen(port, () => {
     console.log(`API rodando em http://localhost:${port}`);
 });
