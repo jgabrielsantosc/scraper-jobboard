@@ -8,6 +8,7 @@ import { scraperJobQuickinHandler as scraperJobQuickin } from './job-scraper-qui
 import { scraperJobSolides } from './job-scraper-solides';
 import { scraperJobWorkableHandler as scraperJobWorkable } from './job-scraper-workable';
 import { scraperJobGreenhouse } from './job-scraper-greenhouse';
+import { scraperJobRecruitei } from './job-scraper-recruitei';
 
 type JobBoardScraper = ExpressHandler;
 
@@ -46,6 +47,7 @@ const jobBoardScrapers: Record<string, JobBoardScraper> = {
     'solides': createScraperWrapper(scraperJobSolides),
     'workable': scraperJobWorkable,
     'greenhouse': createScraperWrapper(greenhouseWrapper),
+    'recrutei.com.br': createScraperWrapper(scraperJobRecruitei),
 };
 
 export const unifiedUrlScraper: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -63,6 +65,7 @@ export const unifiedUrlScraper: ExpressHandler = async (req: Request, res: Respo
         return;
     }
 
+    console.log(`URL recebida: ${url}`);
     console.log(`Job board identificado: ${jobBoard}`);
     const handler = jobBoardScrapers[jobBoard];
     await handler(req, res, next);

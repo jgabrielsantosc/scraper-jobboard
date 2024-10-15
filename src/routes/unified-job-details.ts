@@ -8,6 +8,7 @@ import { jobQuickinHandler } from './job-quickin';
 import { jobSolidesHandler } from './job-solides';
 import { jobGreenhouseHandler } from './job-greenhouse';
 import { jobWorkableHandler } from './job-workable';
+import { jobRecruteiHandler } from './job-recrutei';
 
 // Mapeamento de URLs para handlers
 const jobBoardHandlers: { [key: string]: ExpressHandler } = {
@@ -19,6 +20,7 @@ const jobBoardHandlers: { [key: string]: ExpressHandler } = {
   'solides': jobSolidesHandler,
   'greenhouse.io': jobGreenhouseHandler,
   'workable.com': jobWorkableHandler,
+  'recrutei.com.br': jobRecruteiHandler,
 };
 
 // Função para identificar o job board e chamar o handler apropriado
