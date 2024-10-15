@@ -42,7 +42,7 @@ const jobBoardScrapers: Record<string, JobBoardScraper> = {
     'gupy.io': createScraperWrapper(scraperJobGupy),
     'abler': scraperJobAbler,
     'lever': createScraperWrapper(scraperJobLever),
-    'inhire': scraperJobInhire, // Alterado de 'inhire.app' para 'inhire'
+    'inhire': scraperJobInhire,
     'quickin': scraperJobQuickin,
     'solides': createScraperWrapper(scraperJobSolides),
     'workable': scraperJobWorkable,
@@ -67,6 +67,12 @@ export const unifiedUrlScraper: ExpressHandler = async (req: Request, res: Respo
 
     console.log(`URL recebida: ${url}`);
     console.log(`Job board identificado: ${jobBoard}`);
-    const handler = jobBoardScrapers[jobBoard];
-    await handler(req, res, next);
+    
+    try {
+        const handler = jobBoardScrapers[jobBoard];
+        await handler(req, res, next);
+    } catch (error) {
+        console.error(`Erro ao processar a URL ${url} para o job board ${jobBoard}:`, error);
+        res.status(500).json({ error: 'Erro interno ao processar a requisição' });
+    }
 };
