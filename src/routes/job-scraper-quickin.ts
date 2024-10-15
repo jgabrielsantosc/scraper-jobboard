@@ -23,8 +23,7 @@ export const scraperJobQuickinHandler: ExpressHandler = async (req: Request, res
       links.map(link => (link as HTMLAnchorElement).href)
     );
 
-    await browser.close();
-    res.json({ totalVagas: jobUrls.length, vagas: jobUrls });
+    res.json(jobUrls);
   } catch (error) {
     console.error('Erro ao coletar informações das vagas:', error);
     res.status(500).json({ error: 'Erro ao coletar informações das vagas' });
