@@ -1,38 +1,37 @@
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 
-interface GupyUrl {
+interface CompleoUrl {
   loc: string;
   lastmod?: string;
   changefreq?: string;
   priority?: string;
 }
 
-interface GupySitemap {
+interface CompleoSitemap {
   urlset: {
-    url: GupyUrl | GupyUrl[];
-    lastBuildDate?: string;
+    url: CompleoUrl | CompleoUrl[];
   };
 }
 
-export const scraperJobGupy = async (url: string): Promise<string[]> => {
-  const jobUrls: string[] = [];
-  
+export const scraperJobCompleo = async (url: string): Promise<string[]> => {
   try {
     // Extrai o nome da empresa da URL
-    const companyName = url.match(/https?:\/\/([^.]+)\.gupy\.io/)?.[1];
+    const companyName = url.match(/https?:\/\/([^.]+)\.compleo\.com\.br/)?.[1];
     
     if (!companyName) {
       throw new Error('Nome da empresa não encontrado na URL');
     }
 
-    // Busca o sitemap da empresa
-    const sitemapUrl = `https://${companyName}.gupy.io/sitemap.xml`;
+    // Constrói a URL do sitemap
+    const sitemapUrl = `https://${companyName}.compleo.com.br/sitemap.xml`;
+    
+    // Busca o sitemap
     const response = await axios.get(sitemapUrl);
     
     // Parse do XML
     const parser = new XMLParser();
-    const xmlData = parser.parse(response.data) as GupySitemap;
+    const xmlData = parser.parse(response.data) as CompleoSitemap;
     
     // Extrai as URLs das vagas
     if (xmlData.urlset && xmlData.urlset.url) {
@@ -40,15 +39,12 @@ export const scraperJobGupy = async (url: string): Promise<string[]> => {
         ? xmlData.urlset.url 
         : [xmlData.urlset.url];
         
-      jobUrls.push(...urls.map((url: GupyUrl) => url.loc));
+      return urls.map(url => url.loc);
     }
 
-    return jobUrls;
+    return [];
   } catch (error) {
-    console.error(`Erro ao buscar vagas:`, error);
+    console.error(`Erro ao buscar vagas da Compleo:`, error);
     throw error;
   }
-};
-
-// Exemplo de uso:
-// const vagas = await scraperJobGupy('genteraizen');
+}; 

@@ -9,6 +9,16 @@ import { jobSolidesHandler } from './job-solides';
 import { jobGreenhouseHandler } from './job-greenhouse';
 import { jobWorkableHandler } from './job-workable';
 import { jobRecruteiHandler } from './job-recrutei';
+import { jobRecrutHandler } from './job-recrut';
+import { jobBreezyHandler } from './job-breezy';
+import { jobFactorialHandler } from './job-factorial';
+import { jobEnliztHandler } from './job-enlizt';
+import { jobBambooHandler } from './job-bamboo';
+import { jobWorkdayHandler } from './job-workday';
+import { jobHireroomHandler } from './job-hireroom';
+import { jobPandapeHandler } from './job-pandape';
+import { jobIcimsHandler } from './job-icims';
+import { jobRecruiteeHandler } from './job-recruitee';
 
 // Mapeamento de URLs para handlers
 const jobBoardHandlers: { [key: string]: ExpressHandler } = {
@@ -21,6 +31,16 @@ const jobBoardHandlers: { [key: string]: ExpressHandler } = {
   'greenhouse.io': jobGreenhouseHandler,
   'workable.com': jobWorkableHandler,
   'recrutei.com.br': jobRecruteiHandler,
+  'recrut.ai': jobRecrutHandler,
+  'breezy.hr': jobBreezyHandler,
+  'factorialhr': jobFactorialHandler,
+  'enlizt.me': jobEnliztHandler,
+  'bamboohr': jobBambooHandler,
+  'myworkdayjobs.com': jobWorkdayHandler,
+  'hiringroom.com': jobHireroomHandler,
+  'pandape.infojobs.com.br': jobPandapeHandler,
+  'icims.com': jobIcimsHandler,
+  'recruitee.com': jobRecruiteeHandler,
 };
 
 // Função para identificar o job board e chamar o handler apropriado

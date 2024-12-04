@@ -3,12 +3,23 @@ import { ExpressHandler } from '../types';
 import { scraperJobGupy } from './job-scraper-gupy';
 import { scraperJobAblerHandler as scraperJobAbler } from './job-scraper-abler';
 import { scraperJobLever } from './job-scraper-lever';
-import { scraperJobInhireHandler as scraperJobInhire } from './job-scraper-inhire';
+import { scraperJobInhire } from './job-scraper-inhire';
 import { scraperJobQuickinHandler as scraperJobQuickin } from './job-scraper-quickin';
 import { scraperJobSolides } from './job-scraper-solides';
 import { scraperJobWorkableHandler as scraperJobWorkable } from './job-scraper-workable';
 import { scraperJobGreenhouse } from './job-scraper-greenhouse';
 import { scraperJobRecruitei } from './job-scraper-recruitei';
+import { scraperJobCompleo } from './job-scraper-compleo';
+import { scraperJobRecrut } from './job-scraper-recrut';
+import { scraperJobBreezy } from './job-scraper-breezy';
+import { scraperJobFactorial } from './job-scraper-factorial';
+import { scraperJobEnlizt } from './job-scraper-enlizt';
+import { scraperJobBamboo } from './job-scraper-bamboo';
+import { scraperJobWorkday } from './job-scraper-workday';
+import { scraperJobHireroom } from './job-scraper-hireroom';
+import { scraperJobPandape } from './job-scraper-pandape';
+import { scraperJobIcims } from './job-scraper-icims';
+import { scraperJobRecruitee } from './job-scraper-recruitee';
 
 type JobBoardScraper = ExpressHandler;
 
@@ -42,12 +53,23 @@ const jobBoardScrapers: Record<string, JobBoardScraper> = {
     'gupy.io': createScraperWrapper(scraperJobGupy),
     'abler': scraperJobAbler,
     'lever': createScraperWrapper(scraperJobLever),
-    'inhire': scraperJobInhire,
+    'inhire': createScraperWrapper(scraperJobInhire),
     'quickin': scraperJobQuickin,
     'solides': createScraperWrapper(scraperJobSolides),
     'workable': scraperJobWorkable,
     'greenhouse': createScraperWrapper(greenhouseWrapper),
     'recrutei.com.br': createScraperWrapper(scraperJobRecruitei),
+    'compleo.com.br': createScraperWrapper(scraperJobCompleo),
+    'recrut.ai': createScraperWrapper(scraperJobRecrut),
+    'breezy.hr': createScraperWrapper(scraperJobBreezy),
+    'factorialhr': createScraperWrapper(scraperJobFactorial),
+    'enlizt.me': createScraperWrapper(scraperJobEnlizt),
+    'bamboohr': createScraperWrapper(scraperJobBamboo),
+    'myworkdayjobs.com': createScraperWrapper(scraperJobWorkday),
+    'hiringroom.com': createScraperWrapper(scraperJobHireroom),
+    'pandape.infojobs.com.br': createScraperWrapper(scraperJobPandape),
+    'icims.com': createScraperWrapper(scraperJobIcims),
+    'recruitee.com': createScraperWrapper(scraperJobRecruitee),
 };
 
 export const unifiedUrlScraper: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

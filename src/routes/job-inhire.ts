@@ -2,6 +2,15 @@ import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import { ExpressHandler } from '../types';
 
+interface InhireJobDetails {
+  tenantName: string;
+  description: string;
+  displayName: string;
+  workplaceType: string;
+  location: string;
+  // Adicione outros campos conforme necessário
+}
+
 export const jobInhireHandler: ExpressHandler = async (
   req: Request,
   res: Response,
@@ -14,41 +23,39 @@ export const jobInhireHandler: ExpressHandler = async (
     return;
   }
 
-  const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
-  const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL || 'https://api.firecrawl.dev/v1/scrape';
-
-  console.log('Variáveis de ambiente em job-inhire.ts:');
-  console.log(`FIRECRAWL_API_URL: ${FIRECRAWL_API_URL}`);
-  console.log(`FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY ? 'Definido' : 'Não definido'}`);
-
-  if (!FIRECRAWL_API_KEY) {
-    console.error('FIRECRAWL_API_KEY não está definido');
-    res.status(500).json({ error: 'Erro de configuração do servidor' });
-    return;
-  }
-
   try {
-    console.log(`Iniciando a extração de dados da URL: ${url}`);
-
-    const response = await axios.post(FIRECRAWL_API_URL, {
-      url: url,
-      formats: ['markdown'],
-      waitFor: 5000
-    }, {
-      headers: {
-        'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const { data } = response.data;
-
-    if (!data || !data.markdown) {
-      throw new Error('Dados não encontrados na resposta do Firecrawl');
+    // Extrair tenant e jobId da URL
+    const urlMatch = url.match(/https?:\/\/([^.]+)\.inhire\.app\/vagas\/([^/]+)/);
+    if (!urlMatch) {
+      throw new Error('URL inválida');
     }
 
-    console.log('Conteúdo da vaga extraído com sucesso');
-    res.json({ content: data.markdown });
+    const [, tenant, jobId] = urlMatch;
+
+    const response = await axios.get<InhireJobDetails>(
+      `https://api.inhire.app/job-posts/public/pages/${jobId}`,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'X-Tenant': tenant
+        }
+      }
+    );
+
+    const { data } = response;
+
+    // Formatar o conteúdo da vaga em markdown
+    const jobContent = `
+# ${data.displayName}
+
+${data.description}
+
+**Localização:** ${data.location}
+**Tipo de Trabalho:** ${data.workplaceType}
+**Empresa:** ${data.tenantName}
+    `.trim();
+
+    res.json({ content: jobContent });
 
   } catch (error: any) {
     console.error('Erro ao coletar informações da vaga:', error);

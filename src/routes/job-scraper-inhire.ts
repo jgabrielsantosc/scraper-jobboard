@@ -1,91 +1,57 @@
-import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
-import { ExpressHandler } from '../types';
 
-export const scraperJobInhireHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  let { url } = req.body;
+interface InhireJob {
+  status: string;
+  jobId: string;
+  careerPageId: string;
+  displayName: string;
+  workplaceType: string;
+  location: string;
+}
 
-  if (!url) {
-    res.status(400).json({ error: 'URL parameter is required' });
-    return;
-  }
+interface InhireResponse {
+  tenantName: string;
+  jobsPage: InhireJob[];
+}
 
-  console.log('Variáveis de ambiente em job-scraper-inhire.ts:');
-  console.log(`FIRECRAWL_API_URL: ${process.env.FIRECRAWL_API_URL}`);
-  console.log(`FIRECRAWL_API_KEY: ${process.env.FIRECRAWL_API_KEY ? 'Definido' : 'Não definido'}`);
+const extractTenantName = (url: string): string => {
+  const match = url.match(/https?:\/\/([^.]+)\.inhire\.app/);
+  return match ? match[1] : url;
+};
 
-  if (!process.env.FIRECRAWL_API_URL) {
-    res.status(500).json({ error: 'FIRECRAWL_API_URL não está definido' });
-    return;
-  }
+const createJobUrl = (tenant: string, jobId: string, displayName: string): string => {
+  const jobSlug = displayName
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
-  if (!process.env.FIRECRAWL_API_KEY) {
-    res.status(500).json({ error: 'FIRECRAWL_API_KEY não está definido' });
-    return;
-  }
+  return `https://${tenant}.inhire.app/vagas/${jobId}/${jobSlug}`;
+};
 
+export const scraperJobInhire = async (url: string): Promise<string[]> => {
   try {
-    // Garantir que a URL comece com 'https://'
-    if (!url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-
-    // Validar a URL
-    try {
-      new URL(url);
-    } catch (error) {
-      res.status(400).json({ error: 'URL inválida fornecida' });
-      return;
-    }
-
-    console.log(`Iniciando a extração de dados da URL: ${url}`);
-
-    // Verificar se a URL termina com '/vagas' e adicionar se necessário
-    if (!url.endsWith('/vagas')) {
-      url += '/vagas';
-    }
-
-    console.log(`Fazendo requisição para: ${process.env.FIRECRAWL_API_URL}`);
-    const response = await axios.post(process.env.FIRECRAWL_API_URL, {
-      url: url,
-      formats: ['links'],
-      waitFor: 5000
-    }, {
+    const tenant = extractTenantName(url);
+    
+    const response = await axios.get<InhireResponse>('https://api.inhire.app/job-posts/public/pages', {
       headers: {
-        'Authorization': `Bearer ${process.env.FIRECRAWL_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Accept': 'application/json',
+        'X-Tenant': tenant
       }
     });
 
-    console.log('Resposta recebida do Firecrawl');
-    const { data } = response.data;
-
-    if (!data || !data.links) {
-      throw new Error('Dados não encontrados na resposta do Firecrawl');
-    }
-
-    const jobUrls = data.links.filter((link: string) => {
-      // Verifica se o link é uma URL válida
-      try {
-        new URL(link);
-      } catch {
-        return false;
-      }
-      
-      // Verifica se o link contém '/vagas/' e não é a página principal de vagas
-      return link.includes('/vagas/') && !link.endsWith('/vagas');
-    });
-
-    console.log(`Total de vagas encontradas: ${jobUrls.length}`);
-
-    res.json(jobUrls);
-
-  } catch (error: any) {
-    console.error('Erro ao coletar informações das vagas:', error);
-    res.status(500).json({ 
-      error: 'Erro ao coletar informações das vagas', 
-      details: error.message, 
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
-    });
+    return response.data.jobsPage
+      .filter(job => job.status === 'published')
+      .map(job => createJobUrl(tenant, job.jobId, job.displayName));
+    
+  } catch (error) {
+    console.error(`Erro ao buscar vagas da ${url}:`, error);
+    throw error;
   }
 };
+
+export const scraperJobInhireHandler = scraperJobInhire;
+
+// Exemplo de uso:
+// const vagas = await scraperJobInhire('harpia');
