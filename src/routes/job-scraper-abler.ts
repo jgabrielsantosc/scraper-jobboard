@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { chromium, Page } from 'playwright';
+import axios from 'axios';
 import { ExpressHandler } from '../types';
 
 export const scraperJobAblerHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -10,30 +10,26 @@ export const scraperJobAblerHandler: ExpressHandler = async (req: Request, res: 
     return;
   }
 
-  let browser;
   try {
-    browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    await page.goto(url);
-    await page.waitForSelector('table.table');
-
-    let allUrls: string[] = [];
+    // Extrair o slug do jobboard da URL
+    const slug = new URL(url).hostname.split('.')[0];
+    const allUrls: string[] = [];
+    let currentPage = 1;
     let hasNextPage = true;
 
     while (hasNextPage) {
-      const urlsDaPagina = await extrairUrls(page);
-      allUrls = allUrls.concat(urlsDaPagina);
+      const apiUrl = `https://${slug}.abler.com.br/api_v/v1/vagas.json?&page=${currentPage}`;
+      const response = await axios.get(apiUrl);
+      const data = response.data;
 
-      hasNextPage = await verificarProximaPagina(page);
-      if (hasNextPage) {
-        await clicarProximaPagina(page);
-        await page.waitForTimeout(3000);
-      }
+      // Extrair URLs das vagas
+      const vacancyUrls = data.vacancies.data.map((vacancy: any) => vacancy.links.vacancy_url);
+      allUrls.push(...vacancyUrls);
+
+      // Verificar paginação
+      hasNextPage = data.pagy.next !== null;
+      currentPage++;
     }
-
-    await browser.close();
 
     if (allUrls.length === 0) {
       res.status(404).json([]);
@@ -41,32 +37,7 @@ export const scraperJobAblerHandler: ExpressHandler = async (req: Request, res: 
       res.json(allUrls);
     }
   } catch (error) {
-    console.error('Erro ao coletar informações das vagas:', error);
+    console.error('Erro ao coletar URLs das vagas:', error);
     res.status(500).json([]);
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 };
-
-async function extrairUrls(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const rows = document.querySelectorAll('table.table tbody tr');
-    return Array.from(rows).map(row => {
-      const url_job = row.querySelector('a.btn-apply')?.getAttribute('href');
-      return url_job;
-    }).filter(Boolean) as string[];
-  });
-}
-
-async function verificarProximaPagina(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const nextButton = document.querySelector('li.page-item button.page-link[aria-label="Go to next page"]');
-    return nextButton !== null && !nextButton.hasAttribute('disabled');
-  });
-}
-
-async function clicarProximaPagina(page: Page): Promise<void> {
-  await page.click('li.page-item button.page-link[aria-label="Go to next page"]');
-}

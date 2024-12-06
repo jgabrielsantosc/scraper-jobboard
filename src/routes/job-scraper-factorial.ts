@@ -35,10 +35,10 @@ export const scraperJobFactorial = async (url: string): Promise<string[]> => {
         ? xmlData.urlset.url 
         : [xmlData.urlset.url];
         
-      // Filtra apenas URLs de vagas (geralmente contém '/jobs/')
+      // Filtra apenas URLs de vagas (contém '/job_posting/')
       return urls
         .map(url => url.loc)
-        .filter(url => url.includes('/jobs/'));
+        .filter(url => url.includes('/job_posting/'));
     }
 
     return [];

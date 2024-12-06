@@ -21,7 +21,7 @@ export const jobFactorialHandler: ExpressHandler = async (
     const page = await context.newPage();
 
     await page.goto(url);
-    await page.waitForSelector('.job-detail');
+    await page.waitForSelector('h1.factorial__headingFontFamily', { timeout: 60000 });
 
     const jobInfo = await page.evaluate(() => {
       // Função auxiliar para extrair texto limpo
@@ -31,42 +31,76 @@ export const jobFactorialHandler: ExpressHandler = async (
       };
 
       // Extrair título
-      const title = getTextContent('.job-detail__title');
+      const title = getTextContent('h1.factorial__headingFontFamily');
 
-      // Extrair localização
-      const location = getTextContent('.job-detail__location');
+      // Extrair informações de contrato, período e localização
+      const infoItems = Array.from(document.querySelectorAll('ul li'));
+      let contractType = '';
+      let workPeriod = '';
+      let location = '';
 
-      // Extrair tipo de contrato
-      const contractType = getTextContent('.job-detail__contract-type');
+      infoItems.forEach(item => {
+        const text = item.textContent?.trim() || '';
+        if (text.includes('CLT')) {
+          contractType = text.replace(/\\n/g, ' ').trim();
+        } else if (text.includes('Período')) {
+          workPeriod = text.replace(/\\n/g, ' ').trim();
+        } else if (text.includes('Brasil')) {
+          location = text.replace(/\\n/g, ' ').trim();
+        }
+      });
 
-      // Extrair departamento
-      const department = getTextContent('.job-detail__department');
+      // Extrair descrição e outras seções
+      const sections: { [key: string]: string[] } = {
+        description: [],
+        requirements: [],
+        differentials: [],
+        benefits: []
+      };
 
-      // Extrair descrição
-      const description = document.querySelector('.job-detail__description')?.innerHTML || '';
+      let currentSection = 'description';
 
-      // Extrair requisitos
-      const requirements = Array.from(document.querySelectorAll('.job-detail__requirements li'))
-        .map(item => item.textContent?.trim())
-        .filter(Boolean);
+      // Função para processar texto e determinar a seção
+      const processText = (text: string): string => {
+        if (text.includes('Requisitos')) return 'requirements';
+        if (text.includes('Será um diferencial')) return 'differentials';
+        if (text.includes('Informações Adicionais')) return 'benefits';
+        return currentSection;
+      };
 
-      // Extrair benefícios
-      const benefits = Array.from(document.querySelectorAll('.job-detail__benefits li'))
-        .map(item => item.textContent?.trim())
-        .filter(Boolean);
+      // Processar todos os elementos de texto
+      document.querySelectorAll('.styledText > *').forEach(element => {
+        const text = element.textContent?.trim() || '';
+        
+        // Atualizar seção atual se necessário
+        currentSection = processText(text);
 
-      // Extrair salário se disponível
-      const salary = getTextContent('.job-detail__salary');
+        // Se for uma lista, processar seus itens
+        if (element.tagName === 'UL') {
+          const items = Array.from(element.querySelectorAll('li'))
+            .map(li => li.textContent?.trim())
+            .filter((item): item is string => Boolean(item));
+          
+          sections[currentSection].push(...items);
+        } 
+        // Se for parágrafo e estiver na seção de descrição, adicionar o texto
+        else if (element.tagName === 'P' && currentSection === 'description') {
+          const content = element.textContent?.trim();
+          if (content) {
+            sections.description.push(content);
+          }
+        }
+      });
 
       return {
         title,
-        location,
         contract_type: contractType,
-        department,
-        description,
-        requirements,
-        benefits,
-        salary: salary || undefined
+        work_period: workPeriod,
+        location,
+        description: sections.description.join('\n'),
+        requirements: sections.requirements,
+        differentials: sections.differentials,
+        benefits: sections.benefits
       };
     });
 

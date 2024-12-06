@@ -1,13 +1,40 @@
 import { Request, Response, NextFunction } from 'express';
-import { chromium, Page } from 'playwright';
+import axios from 'axios';
 import { ExpressHandler } from '../types';
 
-/**
- * Manipula a requisição para coletar informações de uma vaga no Gupy
- * @param req - Objeto de requisição Express
- * @param res - Objeto de resposta Express
- */
-export const jobGupyHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+interface GupyJobResponse {
+  pageProps: {
+    job: {
+      id: number;
+      name: string;
+      description: string;
+      prerequisites: string;
+      responsibilities: string;
+      relevantExperiences: string;
+      addressLine: string;
+      jobType: string;
+      workplaceType: string;
+      jobSteps: Array<{
+        name: string;
+        order: number;
+      }>;
+      publishedAt: string;
+      expiresAt: string;
+      company: {
+        subdomain: string;
+      };
+      careerPage: {
+        name: string;
+      };
+    };
+  };
+}
+
+export const jobGupyHandler: ExpressHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   const { url } = req.body;
 
   if (!url) {
@@ -16,46 +43,58 @@ export const jobGupyHandler: ExpressHandler = async (req: Request, res: Response
   }
 
   try {
-    const browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext();
-    const page = await context.newPage();
+    // Extrair subdomain e jobId da URL
+    const urlMatch = url.match(/https:\/\/([^.]+)\.gupy\.io\/jobs\/(\d+)/);
+    if (!urlMatch) {
+      res.status(400).json({ error: 'Invalid Gupy URL format' });
+      return;
+    }
 
-    await page.goto(url);
-    await page.waitForLoadState('networkidle');
+    const [, subdomain, jobId] = urlMatch;
+    
+    // Fazer requisição para a API da Gupy
+    const response = await axios.get<GupyJobResponse>(
+      `https://${subdomain}.gupy.io/_next/data/7BjVGtmcV23zi-L4Ig7aU/pt/jobs/${jobId}.json`
+    );
 
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(2000);
+    const jobData = response.data.pageProps.job;
 
-    const infoDetalhada = await page.evaluate(() => {
-      function getTextContent(selector: string, index: number = 0): string {
-        const elements = document.querySelectorAll(selector);
-        if (elements.length > index) {
-          const text = elements[index].textContent;
-          return text ? text.trim() : '';
-        }
-        return '';
-      }
+    // Processar e limpar o HTML das descrições
+    const cleanHtml = (html: string): string => {
+      return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    };
 
-      return {
-        title: getTextContent('h1#h1'), // Usando a mesma função para o título
-        type_job: getTextContent('.sc-dfd42894-0.bzQMFp', 0),
-        work_model: getTextContent('.sc-dfd42894-0.bzQMFp', 1),
-        pcd: getTextContent('.sc-dfd42894-0.bzQMFp', 2),
-        pub_job: getTextContent('.sc-ccd5d36-11.dmmNfl', 0),
-        deadline: getTextContent('.sc-ccd5d36-11.dmmNfl', 1),
-        description_job: getTextContent('.sc-add46fb1-3.cOkxvQ', 0),
-        requirements: getTextContent('.sc-add46fb1-3.cOkxvQ', 1),
-        infos_extras: getTextContent('.sc-add46fb1-3.cOkxvQ', 2) || ' ',
-        etapas: getTextContent('.sc-c87ac0d4-0.gDozGp', 0) || ' ',
-        about: getTextContent('.sc-add46fb1-3.cOkxvQ', 3) || ' ',
-      };
-    });
+    // Extrair lista de itens do HTML
+    const extractListItems = (html: string): string[] => {
+      const items = html.match(/<li[^>]*>(.*?)<\/li>/g) || [];
+      return items.map(item => cleanHtml(item));
+    };
 
-    await browser.close();
+    const formattedResponse = {
+      id: jobData.id,
+      titulo: jobData.name,
+      empresa: jobData.company.subdomain,
+      pagina_carreiras: jobData.careerPage.name,
+      local_de_trabalho: {
+        endereco: jobData.addressLine,
+        tipo: jobData.workplaceType === 'on-site' ? 'Presencial' : 
+              jobData.workplaceType === 'remote' ? 'Remoto' : 'Híbrido'
+      },
+      tipo_de_vaga: jobData.jobType,
+      descricao: cleanHtml(jobData.description),
+      responsabilidades: extractListItems(jobData.responsibilities),
+      requisitos: extractListItems(jobData.prerequisites),
+      beneficios: extractListItems(jobData.relevantExperiences),
+      etapas_do_processo: jobData.jobSteps
+        .sort((a, b) => a.order - b.order)
+        .map(step => step.name),
+      data_de_publicacao: new Date(jobData.publishedAt).toISOString().split('T')[0],
+      data_de_expiracao: new Date(jobData.expiresAt).toISOString().split('T')[0]
+    };
 
-    res.json(infoDetalhada);
+    res.json(formattedResponse);
   } catch (error) {
     console.error('Erro ao coletar informações da vaga:', error);
     res.status(500).json({ error: 'Erro ao coletar informações da vaga' });
   }
-}
+};
