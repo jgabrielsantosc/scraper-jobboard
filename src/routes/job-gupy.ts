@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import { ExpressHandler } from '../types';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 interface GupyJobResponse {
   pageProps: {
@@ -43,18 +45,23 @@ export const jobGupyHandler: ExpressHandler = async (
   }
 
   try {
-    // Extrair subdomain e jobId da URL
-    const urlMatch = url.match(/https:\/\/([^.]+)\.gupy\.io\/jobs\/(\d+)/);
-    if (!urlMatch) {
+    // Extrair subdomain e jobId da URL usando a classe URL
+    const gupyUrl = new URL(url);
+    const subdomain = gupyUrl.hostname.split('.')[0];
+    const jobIdMatch = gupyUrl.pathname.match(/\/jobs\/(\d+)/);
+
+    if (!jobIdMatch) {
       res.status(400).json({ error: 'Invalid Gupy URL format' });
       return;
     }
 
-    const [, subdomain, jobId] = urlMatch;
-    
+    const jobId = jobIdMatch[1];
+
     // Fazer requisição para a API da Gupy
+    const buildId = process.env.GUPY_BUILD_ID || 'YkTYkQ3OI0qrtyDGxDSAb'; // buildId do .env ou padrão
+
     const response = await axios.get<GupyJobResponse>(
-      `https://${subdomain}.gupy.io/_next/data/7BjVGtmcV23zi-L4Ig7aU/pt/jobs/${jobId}.json`
+      `https://${subdomain}.gupy.io/_next/data/${buildId}/pt/jobs/${jobId}.json`
     );
 
     const jobData = response.data.pageProps.job;
