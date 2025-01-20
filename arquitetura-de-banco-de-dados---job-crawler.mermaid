@@ -1,0 +1,32 @@
+
+    EMPRESA {
+        int id PK
+        string nome
+        string site
+        string linkedin
+        string jobboard
+    }
+    
+    VAGA {
+        int id PK
+        int empresa_id FK
+        string titulo
+        string area
+        string senioridade
+        string modelo_trabalho
+        string modelo_contrato
+        json localizacao
+        text descricao
+        json requisitos
+        json beneficios
+        datetime data_importacao
+        boolean status
+    }
+    
+    ROTINA {
+        int id PK
+        int empresa_id FK
+        int intervalo_atualizacao
+        datetime ultima_execucao
+        boolean ativo
+    }
