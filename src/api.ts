@@ -4,15 +4,18 @@ import swaggerUi from 'swagger-ui-express';
 import { ExpressHandler } from './types';
 import { handleJobDetailsRequest } from './routes/unified-job-details';
 import { unifiedUrlScraper } from './routes/urls-scraper';
+import { jobAIAnalyzerHandler } from './routes/job-ai-analyzer';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Carrega as variáveis de ambiente do arquivo .env
+// Carrega as variáveis de ambiente
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
 
 console.log('Variáveis de ambiente em api.ts:');
 console.log('FIRECRAWL_API_KEY:', process.env.FIRECRAWL_API_KEY ? 'Definido' : 'Não definido');
 console.log('FIRECRAWL_API_URL:', process.env.FIRECRAWL_API_URL);
+console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Definido' : 'Não definido');
 
 process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '/usr/local/share/playwright';
 
@@ -129,6 +132,84 @@ const swaggerDocument = {
           }
         }
       }
+    },
+    '/job-ai-analysis': {
+      post: {
+        summary: 'Analisa uma vaga usando IA para extrair informações estruturadas',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    description: 'URL da vaga para análise'
+                  }
+                },
+                required: ['url']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Análise da vaga realizada com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    originalData: {
+                      type: 'object',
+                      description: 'Dados originais da vaga'
+                    },
+                    aiAnalysis: {
+                      type: 'object',
+                      properties: {
+                        title: { type: 'string' },
+                        company: { type: 'string' },
+                        location: { type: 'string' },
+                        description: { type: 'string' },
+                        requirements: {
+                          type: 'array',
+                          items: { type: 'string' }
+                        },
+                        benefits: {
+                          type: 'array',
+                          items: { type: 'string' }
+                        },
+                        seniority: { type: 'string' },
+                        salary: {
+                          type: 'object',
+                          properties: {
+                            min: { type: 'number' },
+                            max: { type: 'number' },
+                            currency: { type: 'string' }
+                          }
+                        },
+                        workModel: { type: 'string' },
+                        contractType: { type: 'string' },
+                        technologies: {
+                          type: 'array',
+                          items: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '400': {
+            description: 'URL não fornecida ou job board não suportado'
+          },
+          '500': {
+            description: 'Erro ao processar a requisição'
+          }
+        }
+      }
     }
   }
 };
@@ -140,6 +221,9 @@ app.post('/job-details', handleJobDetailsRequest);
 
 // Rota única para processar qualquer job board
 app.post('/scraper-job', unifiedUrlScraper);
+
+// Nova rota para análise com IA
+app.post('/job-ai-analysis', jobAIAnalyzerHandler);
 
 // Middleware de tratamento de erros
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
