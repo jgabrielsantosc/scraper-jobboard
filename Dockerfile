@@ -1,21 +1,35 @@
-FROM mcr.microsoft.com/playwright:v1.48.0-jammy
+FROM node:18-alpine
 
 WORKDIR /app
 
+# Instalar dependências do Playwright
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    nodejs \
+    yarn
+
+# Configurar variáveis de ambiente do Playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+# Copiar arquivos do projeto
 COPY package*.json ./
-RUN rm -f package-lock.json && npm install
-
-# Instale explicitamente os navegadores do Playwright
-RUN npx playwright install --with-deps chromium
-
 COPY tsconfig*.json ./
 COPY src ./src
 
-RUN npm run build
+# Instalar dependências
+RUN npm ci
 
-# Defina a variável de ambiente PLAYWRIGHT_BROWSERS_PATH
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+# Build do projeto
+RUN npm run build:api
 
+# Expor porta da API
 EXPOSE 3001
 
-CMD ["npm", "run", "start:prod"]
+# Comando para iniciar será definido no docker-compose

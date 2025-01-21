@@ -1,0 +1,69 @@
+spec:
+  name: job-crawler
+  services:
+  - name: api
+    git:
+      branch: main
+      repo_clone_url: https://github.com/seu-usuario/playwright-otv.git
+    build_command: npm run build:api
+    run_command: npm run start:prod
+    envs:
+    - key: NODE_ENV
+      value: production
+    - key: PORT
+      value: "3001"
+    - key: REDIS_HOST
+      value: ${redis.host}
+    - key: REDIS_PORT
+      value: ${redis.port}
+    - key: REDIS_PASSWORD
+      value: ${redis.password}
+    - key: POSTGRES_HOST
+      value: ${postgres.host}
+    - key: POSTGRES_PORT
+      value: ${postgres.port}
+    - key: POSTGRES_USER
+      value: ${postgres.user}
+    - key: POSTGRES_PASSWORD
+      value: ${postgres.password}
+    - key: POSTGRES_DB
+      value: ${postgres.database}
+
+  - name: worker
+    git:
+      branch: main
+      repo_clone_url: https://github.com/seu-usuario/playwright-otv.git
+    build_command: npm run build:api
+    run_command: npm run start:worker
+    envs:
+    - key: NODE_ENV
+      value: production
+    - key: REDIS_HOST
+      value: ${redis.host}
+    - key: REDIS_PORT
+      value: ${redis.port}
+    - key: REDIS_PASSWORD
+      value: ${redis.password}
+    - key: POSTGRES_HOST
+      value: ${postgres.host}
+    - key: POSTGRES_PORT
+      value: ${postgres.port}
+    - key: POSTGRES_USER
+      value: ${postgres.user}
+    - key: POSTGRES_PASSWORD
+      value: ${postgres.password}
+    - key: POSTGRES_DB
+      value: ${postgres.database}
+
+  databases:
+  - name: redis
+    engine: REDIS
+    version: "7"
+    production: true
+    cluster: false
+    
+  - name: postgres
+    engine: PG
+    version: "15"
+    production: true
+    cluster: false 

@@ -1,41 +1,64 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: jobcrawler
-      POSTGRES_PASSWORD: jobcrawler
-      POSTGRES_DB: jobcrawler
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npm run start:prod
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jobcrawler"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=postgres
+    depends_on:
+      - redis
+      - postgres
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npm run start:worker
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=postgres
+    depends_on:
+      - redis
+      - postgres
+
+  frontend:
+    build:
+      context: ./dashboard-vagas
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:3001
+    depends_on:
+      - api
 
   redis:
-    image: redis:7-alpine
+    image: redis:alpine
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
 
-  pgadmin:
-    image: dpage/pgadmin4
+  postgres:
+    image: postgres:15-alpine
     ports:
-      - "8080:80"
+      - "5432:5432"
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@jobcrawler.com
-      - PGADMIN_DEFAULT_PASSWORD=admin123
-    depends_on:
-      - postgres
+      - POSTGRES_USER=jobcrawler
+      - POSTGRES_PASSWORD=jobcrawler123
+      - POSTGRES_DB=jobcrawler
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
   redis_data:
+  postgres_data:
