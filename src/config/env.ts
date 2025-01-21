@@ -19,6 +19,9 @@ export const env = {
   // Redis
   REDIS_HOST: process.env.REDIS_HOST || 'localhost',
   REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379'),
+  REDIS_USERNAME: process.env.REDIS_USERNAME || 'default',
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+  REDIS_TLS: process.env.REDIS_TLS === 'true',
   
   // PostgreSQL
   POSTGRES_USER: process.env.POSTGRES_USER || 'jobcrawler',

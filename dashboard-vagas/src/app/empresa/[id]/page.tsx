@@ -2,13 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getEmpresaById, getVagasByEmpresaId } from "@/services/api"
 
-interface PageProps {
-  params: {
-    id: string
-  }
-}
-
-export default async function EmpresaPage({ params }: PageProps) {
+export default async function Page({
+  params,
+}: {
+  params: { id: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   const empresa = await getEmpresaById(params.id)
   const vagas = await getVagasByEmpresaId(params.id)
 

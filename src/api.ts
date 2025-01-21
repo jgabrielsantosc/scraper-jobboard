@@ -42,6 +42,22 @@ api.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 const redis = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
+  username: process.env.REDIS_USERNAME || 'default',
+  password: process.env.REDIS_PASSWORD,
+  tls: process.env.REDIS_TLS === 'true' ? { rejectUnauthorized: false } : undefined,
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
+});
+
+redis.on('connect', () => {
+  console.log('Conexão com Redis estabelecida');
+});
+
+redis.on('error', (err) => {
+  console.error('Erro na conexão com Redis:', err);
 });
 
 // Configuração do PostgreSQL
@@ -223,38 +239,75 @@ api.get('/vagas', async (req, res) => {
 // Endpoint para listar fila de processamento
 api.get('/fila', async (req, res) => {
   try {
+    console.log('Buscando fila de processamento...');
+    
+    // Verificar conexão com Redis
+    try {
+      await redis.ping();
+      console.log('Conexão com Redis OK');
+    } catch (error) {
+      console.error('Erro ao conectar com Redis:', error);
+      res.status(500).json({ error: 'Erro de conexão com Redis' });
+      return;
+    }
+    
     const filaLength = await redis.llen('jobs_to_process');
+    console.log(`Tamanho da fila: ${filaLength}`);
+    
+    if (filaLength === 0) {
+      console.log('Fila vazia');
+      res.json([]);
+      return;
+    }
+    
     const fila = await redis.lrange('jobs_to_process', 0, filaLength - 1);
+    console.log(`Itens encontrados na fila: ${fila.length}`);
     
     const filaProcessada = fila.map(item => {
-      const dados = JSON.parse(item);
-      return {
-        ...dados,
-        adicionado_em: new Date().toISOString() // Em produção, seria ideal armazenar o timestamp junto com os dados
-      };
-    });
+      try {
+        const dados = JSON.parse(item);
+        return {
+          ...dados,
+          adicionado_em: dados.added_at || new Date().toISOString()
+        };
+      } catch (error) {
+        console.error('Erro ao processar item da fila:', error);
+        return null;
+      }
+    }).filter(Boolean);
     
+    console.log(`Itens processados com sucesso: ${filaProcessada.length}`);
     res.json(filaProcessada);
   } catch (error) {
     console.error('Erro ao buscar fila:', error);
-    res.status(500).json({ error: 'Erro ao buscar fila' });
+    res.status(500).json({ error: 'Erro ao buscar fila de processamento' });
   }
 });
 
-// Endpoint para buscar logs (mock - em produção seria integrado com um sistema de logs)
-api.get('/logs', async (req, res) => {
-  try {
-    const logs = [
-      `[${new Date().toISOString()}] Iniciando processamento de todas as empresas...`,
-      `[${new Date().toISOString()}] Processando empresa Clara (ID: 1)`,
-      `[${new Date().toISOString()}] Encontradas 38 vagas`,
-      `[${new Date().toISOString()}] Adicionando vagas à fila de processamento...`
-    ];
-    res.json(logs);
-  } catch (error) {
-    console.error('Erro ao buscar logs:', error);
-    res.status(500).json({ error: 'Erro ao buscar logs' });
+// Criar uma lista circular para armazenar os últimos logs
+const MAX_LOGS = 100;
+const systemLogs: { timestamp: string; message: string; }[] = [];
+
+// Função para adicionar logs
+function addLog(message: string) {
+  const log = {
+    timestamp: new Date().toISOString(),
+    message
+  };
+  
+  if (systemLogs.length >= MAX_LOGS) {
+    systemLogs.shift(); // Remove o log mais antigo
   }
+  systemLogs.push(log);
+  console.log(`[${log.timestamp}] ${message}`);
+}
+
+// Middleware para logging
+api.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method === 'POST' && req.path.includes('/empresas') && req.path.includes('/processar-vagas')) {
+    addLog(`Iniciando processamento de vagas para empresa ID: ${req.params.id}`);
+  }
+  next();
 });
 
 interface VagaData {
@@ -278,25 +331,23 @@ const processarVagasHandler: ExpressHandler = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Buscar informações da empresa
     const { rows: [empresa] } = await pool.query(
       'SELECT id, nome, jobboard FROM empresas WHERE id = $1',
       [id]
     );
 
     if (!empresa) {
+      addLog(`Empresa não encontrada: ID ${id}`);
       res.status(404).json({ error: 'Empresa não encontrada' });
       return;
     }
 
-    console.log(`Processando vagas da empresa ${empresa.nome} (${empresa.jobboard})`);
+    addLog(`Processando vagas da empresa ${empresa.nome} (${empresa.jobboard})`);
 
-    // 1. Extrair URLs das vagas
     const urlsResponse = await axios.post(`${process.env.API_BASE_URL || 'http://localhost:3001'}/scraper-job`, {
       url: empresa.jobboard
     });
 
-    // Normalizar o retorno dos diferentes scrapers
     let novasUrls: string[] = [];
     if (Array.isArray(urlsResponse.data)) {
       novasUrls = urlsResponse.data;
@@ -306,74 +357,54 @@ const processarVagasHandler: ExpressHandler = async (req, res) => {
       );
     }
 
-    // 2. Buscar vagas existentes
     const { rows: vagasExistentes } = await pool.query(
       'SELECT url FROM vagas WHERE empresa_id = $1',
       [empresa.id]
     );
     const urlsExistentes = new Set(vagasExistentes.map(v => v.url));
 
-    // 3. Filtrar apenas URLs novas
     const urlsNovas = novasUrls.filter(url => !urlsExistentes.has(url));
-    console.log(`Encontradas ${urlsNovas.length} novas vagas`);
+    addLog(`Encontradas ${urlsNovas.length} novas vagas para ${empresa.nome}`);
 
-    // 4. Adicionar novas vagas à fila de processamento
+    const vagasAdicionadas = [];
     for (const url of urlsNovas) {
       const jobData = {
         url,
         empresa_id: empresa.id,
-        status: true
+        status: true,
+        added_at: new Date().toISOString()
       };
-      await redis.rpush('jobs_to_process', JSON.stringify(jobData));
       
-      // Iniciar o processamento da vaga com IA
       try {
-        const aiResponse = await axios.post(`${process.env.API_BASE_URL || 'http://localhost:3001'}/job-ai-analysis`, {
-          url
-        });
-        
-        // Inserir a vaga no banco com os dados da IA
-        const vagaData = aiResponse.data as VagaData;
-        await pool.query(`
-          INSERT INTO vagas (
-            empresa_id, url, titulo, area, senioridade, 
-            modelo_trabalho, modelo_contrato, localizacao, 
-            descricao, requisitos, beneficios, status
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
-        `, [
-          empresa.id,
-          url,
-          vagaData.titulo || 'Sem título',
-          vagaData.area || null,
-          vagaData.senioridade || null,
-          vagaData.modelo_trabalho || null,
-          vagaData.modelo_contrato || null,
-          JSON.stringify(vagaData.localizacao || {}),
-          vagaData.descricao || '',
-          JSON.stringify(vagaData.requisitos || []),
-          JSON.stringify(vagaData.beneficios || [])
-        ]);
+        await redis.rpush('jobs_to_process', JSON.stringify(jobData));
+        vagasAdicionadas.push(url);
+        addLog(`Vaga adicionada à fila: ${url}`);
       } catch (error) {
-        console.error(`Erro ao processar vaga ${url} com IA:`, error);
+        addLog(`Erro ao adicionar vaga à fila: ${url}`);
+        console.error(`Erro ao adicionar vaga à fila: ${url}`, error);
       }
     }
 
-    // 5. Atualizar última execução da rotina
     await pool.query(
       'UPDATE rotinas SET ultima_execucao = NOW() WHERE empresa_id = $1',
       [empresa.id]
     );
 
+    addLog(`Processamento concluído para ${empresa.nome}. ${vagasAdicionadas.length} vagas adicionadas à fila`);
+
     res.json({
-      message: `Processamento iniciado para ${urlsNovas.length} novas vagas`,
-      total_vagas: novasUrls.length,
-      novas_vagas: urlsNovas.length
+      message: `${vagasAdicionadas.length} vagas adicionadas à fila de processamento`,
+      total_vagas_encontradas: novasUrls.length,
+      vagas_adicionadas: vagasAdicionadas.length,
+      empresa: {
+        id: empresa.id,
+        nome: empresa.nome
+      }
     });
-    return;
   } catch (error) {
+    addLog(`Erro ao processar vagas: ${error.message}`);
     console.error('Erro ao processar vagas:', error);
     res.status(500).json({ error: 'Erro ao processar vagas' });
-    return;
   }
 };
 
@@ -703,6 +734,35 @@ api.get('/empresas/:id/vagas', async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar vagas da empresa:', error);
     res.status(500).json({ error: 'Erro ao buscar vagas da empresa' });
+  }
+});
+
+// Endpoint para buscar logs
+api.get('/logs', async (req, res) => {
+  try {
+    // Buscar status do worker
+    let workerStatus = 'Desconhecido';
+    try {
+      await redis.ping();
+      const filaLength = await redis.llen('jobs_to_process');
+      workerStatus = `Ativo - ${filaLength} vagas na fila`;
+    } catch (error) {
+      workerStatus = 'Inativo ou com erro';
+    }
+
+    // Adicionar status do worker aos logs
+    const allLogs = [
+      {
+        timestamp: new Date().toISOString(),
+        message: `Status do Worker: ${workerStatus}`
+      },
+      ...systemLogs
+    ];
+
+    res.json(allLogs);
+  } catch (error) {
+    console.error('Erro ao buscar logs:', error);
+    res.status(500).json({ error: 'Erro ao buscar logs' });
   }
 });
 

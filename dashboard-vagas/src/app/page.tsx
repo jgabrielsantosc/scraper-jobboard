@@ -213,6 +213,9 @@ async function LogsView() {
   )
 }
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function Dashboard() {
   return (
     <main className="container mx-auto py-10">

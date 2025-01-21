@@ -6,6 +6,10 @@ import axios from 'axios';
 const redis = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
+  username: process.env.REDIS_USERNAME || 'default',
+  password: process.env.REDIS_PASSWORD,
+  tls: process.env.REDIS_TLS === 'true' ? { rejectUnauthorized: false } : undefined,
+  maxRetriesPerRequest: 3,
   retryStrategy: (times) => {
     const delay = Math.min(times * 50, 2000);
     return delay;
@@ -52,6 +56,11 @@ interface JobData {
 async function processarVaga(jobData: JobData): Promise<void> {
   try {
     console.log(`Processando vaga: ${jobData.url}`);
+    
+    // Remover a vaga da fila antes de processar para evitar duplicação
+    await redis.lrem('jobs_to_process', 0, JSON.stringify(jobData));
+    console.log(`Vaga removida da fila: ${jobData.url}`);
+
     const jobResponse = await axios.post(`${API_BASE_URL}/job-ai-analysis`, {
       url: jobData.url
     });
@@ -87,7 +96,7 @@ async function processarVaga(jobData: JobData): Promise<void> {
           jobData.empresa_id
         ]
       );
-      console.log(`Vaga atualizada: ${jobData.url}`);
+      console.log(`Vaga atualizada: ${jobData.url} - ${jobInfo.titulo}`);
     } else {
       // Inserir nova vaga
       await pool.query(
@@ -111,23 +120,45 @@ async function processarVaga(jobData: JobData): Promise<void> {
           JSON.stringify(jobInfo.beneficios || [])
         ]
       );
-      console.log(`Nova vaga inserida: ${jobData.url}`);
+      console.log(`Nova vaga inserida: ${jobData.url} - ${jobInfo.titulo}`);
     }
-
-    // Remover a vaga da fila após processamento bem-sucedido
-    await redis.lrem('jobs_to_process', 0, JSON.stringify(jobData));
-    console.log(`Vaga removida da fila: ${jobData.url}`);
   } catch (error) {
     console.error(`Erro ao processar vaga ${jobData.url}:`, error);
+    // Em caso de erro, coloca a vaga de volta na fila
+    await redis.rpush('jobs_to_process', JSON.stringify(jobData));
     throw error;
   }
 }
 
 export async function startQueueProcessor() {
-  console.log('Iniciando processador de fila de vagas...\n');
+  console.log('\nIniciando processador de fila de vagas...');
+  console.log('Configurações:');
+  console.log('-------------');
+  console.log('REDIS_HOST:', process.env.REDIS_HOST || 'localhost');
+  console.log('REDIS_PORT:', process.env.REDIS_PORT || '6379');
+  console.log('POSTGRES_HOST:', process.env.POSTGRES_HOST || 'localhost');
+  console.log('POSTGRES_PORT:', process.env.POSTGRES_PORT || '5432');
+  console.log('POSTGRES_DB:', process.env.POSTGRES_DB || 'jobcrawler');
+  console.log('API_BASE_URL:', API_BASE_URL);
+  console.log('-------------\n');
+
+  let processedJobs = 0;
+  let failedJobs = 0;
+  let lastStatusUpdate = Date.now();
 
   while (true) {
     try {
+      // Atualizar status a cada minuto
+      if (Date.now() - lastStatusUpdate > 60000) {
+        console.log('\nStatus do processador:');
+        console.log(`Vagas processadas: ${processedJobs}`);
+        console.log(`Falhas: ${failedJobs}`);
+        const filaLength = await redis.llen('jobs_to_process');
+        console.log(`Vagas na fila: ${filaLength}`);
+        console.log('-------------\n');
+        lastStatusUpdate = Date.now();
+      }
+
       // Pega a próxima vaga da fila (bloqueia por 5 segundos esperando por novas vagas)
       const jobDataStr = await redis.blpop('jobs_to_process', 5);
 
@@ -136,9 +167,11 @@ export async function startQueueProcessor() {
         
         try {
           await processarVaga(jobData);
+          processedJobs++;
           // Espera 1 segundo entre cada processamento
           await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (error) {
+          failedJobs++;
           console.error(`Erro ao processar vaga da fila:`, error);
           // Em caso de erro, coloca a vaga de volta na fila para tentar novamente depois
           await redis.rpush('jobs_to_process', JSON.stringify(jobData));
