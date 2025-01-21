@@ -3,23 +3,38 @@ export interface Empresa {
   nome: string;
   jobboard: string;
   status: boolean;
-  ultima_execucao?: string;
+  ultima_execucao: string;
+  total_vagas: number;
+  vagas_ativas: number;
 }
 
 export interface Vaga {
   id: number;
-  url: string;
   empresa_id: number;
-  empresa_nome?: string;
-  titulo?: string;
+  empresa_nome: string;
+  url: string;
+  titulo: string;
+  area: string;
+  senioridade: string;
+  modelo_trabalho: string;
+  modelo_contrato: string;
+  localizacao: {
+    cidade?: string;
+    estado?: string;
+    pais?: string;
+  };
+  descricao: string;
+  requisitos: string[];
+  beneficios: string[];
   status: boolean;
-  criado_em: string;
+  created_at: string;
+  updated_at: string;
   atualizado_em: string;
 }
 
 export interface FilaProcessamento {
-  url: string;
   empresa_id: number;
+  url: string;
   status: boolean;
   adicionado_em: string;
 }

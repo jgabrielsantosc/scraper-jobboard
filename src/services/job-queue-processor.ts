@@ -68,25 +68,21 @@ async function processarVaga(jobData: JobData): Promise<void> {
       // Atualizar vaga existente
       await pool.query(
         `UPDATE vagas SET
-          titulo = $1, area = $2, sub_area = $3, senioridade = $4,
-          modelo_trabalho = $5, modelo_contrato = $6, cidade = $7,
-          estado = $8, pais = $9, descricao = $10, requisitos = $11,
-          beneficios = $12, status = $13, updated_at = NOW()
-        WHERE url = $14 AND empresa_id = $15`,
+          titulo = $1, area = $2, senioridade = $3,
+          modelo_trabalho = $4, modelo_contrato = $5,
+          localizacao = $6, descricao = $7, requisitos = $8,
+          beneficios = $9, status = true, updated_at = NOW()
+        WHERE url = $10 AND empresa_id = $11`,
         [
           jobInfo.titulo,
           jobInfo.area,
-          jobInfo.sub_area,
           jobInfo.senioridade,
           jobInfo.modelo_trabalho,
           jobInfo.modelo_contrato,
-          jobInfo.localizacao.cidade,
-          jobInfo.localizacao.estado,
-          jobInfo.localizacao.pais,
+          JSON.stringify(jobInfo.localizacao || {}),
           jobInfo.descricao,
-          JSON.stringify(jobInfo.requisitos),
-          JSON.stringify(jobInfo.beneficios),
-          true,
+          JSON.stringify(jobInfo.requisitos || []),
+          JSON.stringify(jobInfo.beneficios || []),
           jobData.url,
           jobData.empresa_id
         ]
@@ -96,30 +92,31 @@ async function processarVaga(jobData: JobData): Promise<void> {
       // Inserir nova vaga
       await pool.query(
         `INSERT INTO vagas (
-          empresa_id, url, titulo, area, sub_area, senioridade,
-          modelo_trabalho, modelo_contrato, cidade, estado, pais,
-          descricao, requisitos, beneficios, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())`,
+          empresa_id, url, titulo, area, senioridade,
+          modelo_trabalho, modelo_contrato, localizacao,
+          descricao, requisitos, beneficios, status,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, NOW(), NOW())`,
         [
           jobData.empresa_id,
           jobData.url,
           jobInfo.titulo,
           jobInfo.area,
-          jobInfo.sub_area,
           jobInfo.senioridade,
           jobInfo.modelo_trabalho,
           jobInfo.modelo_contrato,
-          jobInfo.localizacao.cidade,
-          jobInfo.localizacao.estado,
-          jobInfo.localizacao.pais,
+          JSON.stringify(jobInfo.localizacao || {}),
           jobInfo.descricao,
-          JSON.stringify(jobInfo.requisitos),
-          JSON.stringify(jobInfo.beneficios),
-          true
+          JSON.stringify(jobInfo.requisitos || []),
+          JSON.stringify(jobInfo.beneficios || [])
         ]
       );
       console.log(`Nova vaga inserida: ${jobData.url}`);
     }
+
+    // Remover a vaga da fila após processamento bem-sucedido
+    await redis.lrem('jobs_to_process', 0, JSON.stringify(jobData));
+    console.log(`Vaga removida da fila: ${jobData.url}`);
   } catch (error) {
     console.error(`Erro ao processar vaga ${jobData.url}:`, error);
     throw error;

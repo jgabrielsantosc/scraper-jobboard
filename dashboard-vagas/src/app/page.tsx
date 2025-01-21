@@ -1,7 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { getEmpresas, getFilaProcessamento, getLogs, getStats, getVagas } from "@/services/api"
+import { Button } from "@/components/ui/button"
+import { getEmpresas, getFilaProcessamento, getLogs, getStats, getVagas, processarVagas } from "@/services/api"
 import { Suspense } from "react"
 
 async function Stats() {
@@ -55,18 +56,60 @@ async function EmpresasTable() {
           <TableHead>ID</TableHead>
           <TableHead>Nome</TableHead>
           <TableHead>Job Board</TableHead>
+          <TableHead>Total de Vagas</TableHead>
+          <TableHead>Vagas Ativas</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Última Execução</TableHead>
+          <TableHead>Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {empresas.map(empresa => (
           <TableRow key={empresa.id}>
             <TableCell>{empresa.id}</TableCell>
-            <TableCell>{empresa.nome}</TableCell>
-            <TableCell>{empresa.jobboard}</TableCell>
+            <TableCell>
+              <a 
+                href={`/empresa/${empresa.id}`} 
+                className="text-primary hover:underline"
+              >
+                {empresa.nome}
+              </a>
+            </TableCell>
+            <TableCell>
+              <a 
+                href={empresa.jobboard} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:underline"
+              >
+                {empresa.jobboard}
+              </a>
+            </TableCell>
+            <TableCell>{empresa.total_vagas || 0}</TableCell>
+            <TableCell>{empresa.vagas_ativas || 0}</TableCell>
             <TableCell>{empresa.status ? 'Ativo' : 'Inativo'}</TableCell>
-            <TableCell>{empresa.ultima_execucao || '-'}</TableCell>
+            <TableCell>
+              {empresa.ultima_execucao ? (
+                <div className="flex flex-col">
+                  <span>{new Date(empresa.ultima_execucao).toLocaleDateString('pt-BR')}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(empresa.ultima_execucao).toLocaleTimeString('pt-BR')}
+                  </span>
+                </div>
+              ) : '-'}
+            </TableCell>
+            <TableCell>
+              <form action={processarVagas}>
+                <input type="hidden" name="empresaId" value={empresa.id} />
+                <Button 
+                  type="submit"
+                  variant="outline" 
+                  size="sm"
+                >
+                  Processar Vagas
+                </Button>
+              </form>
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -83,7 +126,10 @@ async function VagasTable() {
         <TableRow>
           <TableHead>ID</TableHead>
           <TableHead>Empresa</TableHead>
-          <TableHead>URL</TableHead>
+          <TableHead>Título</TableHead>
+          <TableHead>Área</TableHead>
+          <TableHead>Senioridade</TableHead>
+          <TableHead>Modelo de Trabalho</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Atualizado em</TableHead>
         </TableRow>
@@ -92,10 +138,27 @@ async function VagasTable() {
         {vagas.map(vaga => (
           <TableRow key={vaga.id}>
             <TableCell>{vaga.id}</TableCell>
-            <TableCell>{vaga.empresa_nome}</TableCell>
-            <TableCell className="max-w-md truncate">{vaga.url}</TableCell>
+            <TableCell>
+              <a 
+                href={`/empresa/${vaga.empresa_id}`} 
+                className="text-primary hover:underline"
+              >
+                {vaga.empresa_nome}
+              </a>
+            </TableCell>
+            <TableCell>{vaga.titulo}</TableCell>
+            <TableCell>{vaga.area}</TableCell>
+            <TableCell>{vaga.senioridade}</TableCell>
+            <TableCell>{vaga.modelo_trabalho}</TableCell>
             <TableCell>{vaga.status ? 'Ativa' : 'Inativa'}</TableCell>
-            <TableCell>{vaga.atualizado_em}</TableCell>
+            <TableCell>
+              <div className="flex flex-col">
+                <span>{new Date(vaga.atualizado_em).toLocaleDateString('pt-BR')}</span>
+                <span className="text-sm text-muted-foreground">
+                  {new Date(vaga.atualizado_em).toLocaleTimeString('pt-BR')}
+                </span>
+              </div>
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -134,9 +197,19 @@ async function LogsView() {
   const logs = await getLogs()
   
   return (
-    <pre className="bg-secondary p-4 rounded-lg overflow-auto max-h-[500px] text-sm">
-      {logs.join('\n')}
-    </pre>
+    <div className="space-y-4">
+      {logs.map((log, index) => {
+        const [timestamp, ...message] = log.split('] ')
+        return (
+          <div key={index} className="flex items-start space-x-2 text-sm">
+            <span className="text-muted-foreground whitespace-nowrap">
+              {new Date(timestamp.slice(1)).toLocaleString('pt-BR')}
+            </span>
+            <span>{message.join('] ')}</span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
