@@ -245,9 +245,12 @@ api.get('/fila', async (req, res) => {
     try {
       await redis.ping();
       console.log('Conexão com Redis OK');
-    } catch (error) {
-      console.error('Erro ao conectar com Redis:', error);
-      res.status(500).json({ error: 'Erro de conexão com Redis' });
+    } catch (err: any) {
+      console.error('Erro ao conectar com Redis:', err);
+      res.status(500).json({ 
+        error: 'Erro de conexão com Redis',
+        message: err?.message || 'Erro desconhecido'
+      });
       return;
     }
     
@@ -270,17 +273,20 @@ api.get('/fila', async (req, res) => {
           ...dados,
           adicionado_em: dados.added_at || new Date().toISOString()
         };
-      } catch (error) {
-        console.error('Erro ao processar item da fila:', error);
+      } catch (err: any) {
+        console.error('Erro ao processar item da fila:', err);
         return null;
       }
     }).filter(Boolean);
     
     console.log(`Itens processados com sucesso: ${filaProcessada.length}`);
     res.json(filaProcessada);
-  } catch (error) {
-    console.error('Erro ao buscar fila:', error);
-    res.status(500).json({ error: 'Erro ao buscar fila de processamento' });
+  } catch (err: any) {
+    console.error('Erro ao buscar fila:', err);
+    res.status(500).json({ 
+      error: 'Erro ao buscar fila de processamento',
+      message: err?.message || 'Erro desconhecido'
+    });
   }
 });
 
@@ -379,9 +385,9 @@ const processarVagasHandler: ExpressHandler = async (req, res) => {
         await redis.rpush('jobs_to_process', JSON.stringify(jobData));
         vagasAdicionadas.push(url);
         addLog(`Vaga adicionada à fila: ${url}`);
-      } catch (error) {
-        addLog(`Erro ao adicionar vaga à fila: ${url}`);
-        console.error(`Erro ao adicionar vaga à fila: ${url}`, error);
+      } catch (err: any) {
+        addLog(`Erro ao adicionar vaga à fila: ${url} - ${err?.message || 'Erro desconhecido'}`);
+        console.error(`Erro ao adicionar vaga à fila: ${url}`, err);
       }
     }
 
@@ -401,10 +407,14 @@ const processarVagasHandler: ExpressHandler = async (req, res) => {
         nome: empresa.nome
       }
     });
-  } catch (error) {
-    addLog(`Erro ao processar vagas: ${error.message}`);
-    console.error('Erro ao processar vagas:', error);
-    res.status(500).json({ error: 'Erro ao processar vagas' });
+  } catch (err: any) {
+    const errorMessage = err?.message || 'Erro desconhecido';
+    addLog(`Erro ao processar vagas: ${errorMessage}`);
+    console.error('Erro ao processar vagas:', err);
+    res.status(500).json({ 
+      error: 'Erro ao processar vagas',
+      message: errorMessage
+    });
   }
 };
 
@@ -746,8 +756,8 @@ api.get('/logs', async (req, res) => {
       await redis.ping();
       const filaLength = await redis.llen('jobs_to_process');
       workerStatus = `Ativo - ${filaLength} vagas na fila`;
-    } catch (error) {
-      workerStatus = 'Inativo ou com erro';
+    } catch (err: any) {
+      workerStatus = `Inativo ou com erro: ${err?.message || 'Erro desconhecido'}`;
     }
 
     // Adicionar status do worker aos logs
@@ -760,9 +770,12 @@ api.get('/logs', async (req, res) => {
     ];
 
     res.json(allLogs);
-  } catch (error) {
-    console.error('Erro ao buscar logs:', error);
-    res.status(500).json({ error: 'Erro ao buscar logs' });
+  } catch (err: any) {
+    console.error('Erro ao buscar logs:', err);
+    res.status(500).json({ 
+      error: 'Erro ao buscar logs',
+      message: err?.message || 'Erro desconhecido'
+    });
   }
 });
 
