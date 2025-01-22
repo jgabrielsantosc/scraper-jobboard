@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "pnpm install --no-frozen-lockfile && pnpm build",
-  "installCommand": "npm i -g pnpm && pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter @job-scraper/dashboard install --no-frozen-lockfile && pnpm --filter @job-scraper/dashboard build",
+  "installCommand": "npm i -g pnpm && pnpm --filter @job-scraper/dashboard install --no-frozen-lockfile",
   "framework": "nextjs",
   "outputDirectory": ".next"
 } 
