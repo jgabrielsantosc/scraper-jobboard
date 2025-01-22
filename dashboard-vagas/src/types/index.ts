@@ -1,18 +1,22 @@
 export interface Empresa {
-  id: number;
+  id: string;
   nome: string;
+  site?: string;
+  linkedin?: string;
   jobboard: string;
   status: boolean;
-  ultima_execucao: string;
-  total_vagas: number;
-  vagas_ativas: number;
+  total_vagas?: number;
+  vagas_ativas?: number;
+  ultima_execucao?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Vaga {
-  id: number;
-  empresa_id: number;
-  empresa_nome: string;
+  id: string;
   url: string;
+  empresa_id: string;
+  empresa_nome: string;
   titulo: string;
   area: string;
   senioridade: string;
@@ -27,22 +31,25 @@ export interface Vaga {
   requisitos: string[];
   beneficios: string[];
   status: boolean;
+  data_importacao: string;
   created_at: string;
   updated_at: string;
-  atualizado_em: string;
 }
 
 export interface FilaProcessamento {
-  empresa_id: number;
+  id: string;
+  empresa_id: string;
   url: string;
-  status: boolean;
+  status: string;
+  tentativas: number;
+  erro?: string;
   adicionado_em: string;
+  processado_em?: string;
 }
 
 export interface DashboardStats {
   total_empresas: number;
   empresas_ativas: number;
-  total_vagas: number;
   vagas_ativas: number;
   vagas_na_fila: number;
 } 

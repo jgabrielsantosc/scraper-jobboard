@@ -1,244 +1,210 @@
 import { Request, Response } from 'express';
-import type { RequestHandler } from 'express';
-import { pool } from '../config/database';
-import { redis } from '../config/redis';
-import { env } from '../config/env';
+import { supabase } from '../config/supabase';
+import { EmpresaService } from '../services/empresa.service';
+import { JobQueueService } from '../services/job-queue.service';
+import { JobData } from '../types';
 import axios from 'axios';
-import { Empresa, VagaData } from '../types';
+import { env } from '../config/env';
 
-const EMPRESA_NAO_ENCONTRADA = 'Empresa não encontrada';
-
-export const listarEmpresas: RequestHandler = async (req, res) => {
+export async function listarEmpresas(req: Request, res: Response) {
   try {
-    const result = await pool.query(`
-      SELECT 
-        e.id, 
-        e.nome, 
-        e.site,
-        e.linkedin,
-        e.jobboard,
-        e.created_at,
-        e.updated_at,
-        r.ultima_execucao,
-        r.ativo as status,
-        COUNT(CASE WHEN v.status = true THEN 1 END) as vagas_ativas,
-        COUNT(v.id) as total_vagas
-      FROM empresas e 
-      LEFT JOIN rotinas r ON e.id = r.empresa_id 
-      LEFT JOIN vagas v ON e.id = v.empresa_id
-      GROUP BY e.id, e.nome, e.site, e.linkedin, e.jobboard, e.created_at, e.updated_at, r.ultima_execucao, r.ativo
-      ORDER BY e.id DESC
-    `);
-    
-    res.json(result.rows);
+    const empresas = await EmpresaService.listar();
+    res.json(empresas);
   } catch (error) {
-    console.error('Erro ao buscar empresas:', error);
-    res.status(500).json({ error: 'Erro ao buscar empresas' });
+    console.error('Erro ao listar empresas:', error);
+    res.status(500).json({ error: 'Erro ao listar empresas' });
   }
-};
-
-async function buscarEmpresa(id: string) {
-  const { rows: [empresa] } = await pool.query(
-    'SELECT id, nome, jobboard FROM empresas WHERE id = $1',
-    [id]
-  );
-  return empresa;
 }
 
-async function desativarVagas(vagasIds: number[]) {
-  if (vagasIds.length === 0) return;
-  
-  await pool.query(
-    'UPDATE vagas SET status = false WHERE id = ANY($1)',
-    [vagasIds]
-  );
-}
-
-async function extrairUrlsJobBoard(url: string): Promise<string[]> {
+export async function buscarEmpresaPorId(req: Request, res: Response) {
   try {
-    console.log('Fazendo requisição para scraper-job com URL:', url);
-    const response = await axios.post(`${env.API_BASE_URL}/scraper-job`, { url });
+    const { id } = req.params;
+    const empresa = await EmpresaService.buscarPorId(id);
+
+    if (empresa === null) {
+      res.status(404).json({ error: 'Empresa não encontrada' });
+      return;
+    }
+
+    res.json(empresa);
+  } catch (error) {
+    console.error('Erro ao buscar empresa:', error);
+    res.status(500).json({ error: 'Erro ao buscar empresa' });
+  }
+}
+
+export async function criarEmpresa(req: Request, res: Response) {
+  try {
+    const empresa = await EmpresaService.criar(req.body);
+    res.status(201).json(empresa);
+  } catch (error) {
+    console.error('Erro ao criar empresa:', error);
+    res.status(500).json({ error: 'Erro ao criar empresa' });
+  }
+}
+
+export async function atualizarEmpresa(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const empresa = await EmpresaService.atualizar(id, req.body);
+
+    if (empresa === null) {
+      res.status(404).json({ error: 'Empresa não encontrada' });
+      return;
+    }
+
+    res.json(empresa);
+  } catch (error) {
+    console.error('Erro ao atualizar empresa:', error);
+    res.status(500).json({ error: 'Erro ao atualizar empresa' });
+  }
+}
+
+export async function excluirEmpresa(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
     
-    // Log da resposta para debug
-    console.log('Resposta do scraper-job:', JSON.stringify(response.data, null, 2));
-    
-    // Se a resposta já é um array, retorna diretamente
+    // Verificar se a empresa existe antes de excluir
+    const empresa = await EmpresaService.buscarPorId(id);
+    if (empresa === null) {
+      res.status(404).json({ error: 'Empresa não encontrada' });
+      return;
+    }
+
+    await EmpresaService.excluir(id);
+    res.status(204).send();
+  } catch (error) {
+    console.error('Erro ao excluir empresa:', error);
+    res.status(500).json({ error: 'Erro ao excluir empresa' });
+  }
+}
+
+export async function extrairUrlsEmpresa(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const empresa = await EmpresaService.buscarPorId(id);
+
+    if (empresa === null) {
+      res.status(404).json({ error: 'Empresa não encontrada' });
+      return;
+    }
+
+    // Fazer requisição para o scraper de URLs
+    const response = await axios.post(`${env.API_BASE_URL}/scraper-job`, {
+      url: empresa.jobboard
+    });
+
+    // Normalizar a resposta
+    let urls: string[] = [];
     if (Array.isArray(response.data)) {
-      return response.data;
-    }
-    
-    // Se a resposta tem a propriedade urls, retorna ela
-    if (response.data.urls && Array.isArray(response.data.urls)) {
-      return response.data.urls;
-    }
-    
-    // Se a resposta tem a propriedade vagas, mapeia para urls
-    if (response.data.vagas && Array.isArray(response.data.vagas)) {
-      return response.data.vagas.map((vaga: any) => 
+      urls = response.data;
+    } else if (response.data.vagas) {
+      urls = response.data.vagas.map((vaga: any) => 
         typeof vaga === 'string' ? vaga : vaga.url_job || vaga.url
       );
     }
-    
-    // Se chegou aqui, temos um formato inesperado
-    console.warn('Formato de resposta inesperado do scraper-job:', response.data);
-    return [];
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Erro na requisição ao scraper-job:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
-    } else {
-      console.error('Erro ao extrair URLs do job board:', error);
-    }
-    return [];
-  }
-}
-
-export const extrairUrlsVagas: RequestHandler = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const empresa = await buscarEmpresa(id);
-
-    if (!empresa) {
-      res.status(404).json({ error: EMPRESA_NAO_ENCONTRADA });
-      return;
-    }
-
-    console.log(`Extraindo URLs de vagas da empresa ${empresa.nome} (${empresa.jobboard})`);
-
-    const urlsExtraidas = await extrairUrlsJobBoard(empresa.jobboard);
-
-    if (urlsExtraidas.length === 0) {
-      res.json({
-        empresa_id: empresa.id,
-        empresa_nome: empresa.nome,
-        erro: 'Não foi possível extrair URLs de vagas neste momento',
-        total_urls_extraidas: 0,
-        urls_novas: [],
-        vagas_desativadas: 0
-      });
-      return;
-    }
-
-    const { rows: vagasAtivas } = await pool.query(
-      'SELECT id, url FROM vagas WHERE empresa_id = $1 AND status = true',
-      [empresa.id]
-    );
-
-    const urlsAtivas = new Set(urlsExtraidas);
-    const vagasDesativadas = vagasAtivas.filter(vaga => !urlsAtivas.has(vaga.url));
-
-    await desativarVagas(vagasDesativadas.map(v => v.id));
-
-    const urlsExistentes = new Set(vagasAtivas.map(v => v.url));
-    const urlsNovas = urlsExtraidas.filter((url: string) => !urlsExistentes.has(url));
 
     res.json({
       empresa_id: empresa.id,
       empresa_nome: empresa.nome,
-      total_urls_extraidas: urlsExtraidas.length,
-      urls_novas: urlsNovas,
-      vagas_desativadas: vagasDesativadas.length
+      total_urls: urls.length,
+      urls
     });
   } catch (error) {
     console.error('Erro ao extrair URLs:', error);
-    res.status(500).json({ 
-      error: 'Erro ao extrair URLs das vagas',
-      detalhes: error instanceof Error ? error.message : 'Erro desconhecido'
-    });
+    res.status(500).json({ error: 'Erro ao extrair URLs das vagas' });
   }
-};
-
-async function processarVaga(url: string, empresaId: number) {
-  const aiResponse = await axios.post(`${env.API_BASE_URL}/job-ai-analysis`, { url });
-  const vagaData = aiResponse.data as VagaData;
-
-  const { rows: [novaVaga] } = await pool.query(`
-    INSERT INTO vagas (
-      empresa_id, url, titulo, area, senioridade, 
-      modelo_trabalho, modelo_contrato, localizacao, 
-      descricao, requisitos, beneficios, status
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
-    RETURNING id
-  `, [
-    empresaId,
-    url,
-    vagaData.titulo || 'Sem título',
-    vagaData.area || null,
-    vagaData.senioridade || null,
-    vagaData.modelo_trabalho || null,
-    vagaData.modelo_contrato || null,
-    JSON.stringify(vagaData.localizacao || {}),
-    vagaData.descricao || '',
-    JSON.stringify(vagaData.requisitos || []),
-    JSON.stringify(vagaData.beneficios || [])
-  ]);
-
-  return {
-    id: novaVaga.id,
-    url,
-    titulo: vagaData.titulo || 'Sem título'
-  };
 }
 
-export const processarVagas: RequestHandler = async (req, res) => {
+export async function extrairVagasEmpresa(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const empresa = await buscarEmpresa(id);
+    const empresa = await EmpresaService.buscarPorId(id);
 
-    if (!empresa) {
-      res.status(404).json({ error: EMPRESA_NAO_ENCONTRADA });
+    if (empresa === null) {
+      res.status(404).json({ error: 'Empresa não encontrada' });
       return;
     }
 
-    const urlsExtraidas = await extrairUrlsJobBoard(empresa.jobboard);
+    // Primeiro extrair as URLs
+    const urlsResponse = await axios.post(`${env.API_BASE_URL}/scraper-job`, {
+      url: empresa.jobboard
+    });
 
-    const { rows: vagasAtivas } = await pool.query(
-      'SELECT id, url FROM vagas WHERE empresa_id = $1 AND status = true',
-      [empresa.id]
-    );
-
-    const urlsAtivas = new Set(urlsExtraidas);
-    const vagasDesativadas = vagasAtivas.filter(vaga => !urlsAtivas.has(vaga.url));
-
-    await desativarVagas(vagasDesativadas.map(v => v.id));
-
-    const urlsExistentes = new Set(vagasAtivas.map(v => v.url));
-    const urlsNovas = urlsExtraidas.filter((url: string) => !urlsExistentes.has(url));
-
-    const vagasProcessadas = [];
-    const erros = [];
-
-    for (const url of urlsNovas) {
-      try {
-        const vaga = await processarVaga(url, empresa.id);
-        vagasProcessadas.push(vaga);
-      } catch (error) {
-        console.error(`Erro ao processar vaga ${url}:`, error);
-        erros.push({ 
-          url, 
-          erro: error instanceof Error ? error.message : 'Erro desconhecido' 
-        });
-      }
+    // Normalizar URLs
+    let urls: string[] = [];
+    if (Array.isArray(urlsResponse.data)) {
+      urls = urlsResponse.data;
+    } else if (urlsResponse.data.vagas) {
+      urls = urlsResponse.data.vagas.map((vaga: any) => 
+        typeof vaga === 'string' ? vaga : vaga.url_job || vaga.url
+      );
     }
 
-    await pool.query(
-      'UPDATE rotinas SET ultima_execucao = NOW() WHERE empresa_id = $1',
-      [empresa.id]
+    // Processar cada URL para extrair detalhes
+    const vagas = await Promise.all(
+      urls.map(async (url) => {
+        try {
+          // Extrair detalhes básicos
+          const detalhesResponse = await axios.post(`${env.API_BASE_URL}/job-details`, { url });
+          
+          // Extrair detalhes com IA
+          const aiResponse = await axios.post(`${env.API_BASE_URL}/job-ai-analysis`, { url });
+          
+          return {
+            url,
+            detalhes: detalhesResponse.data,
+            analise_ia: aiResponse.data
+          };
+        } catch (error) {
+          console.error(`Erro ao processar vaga ${url}:`, error);
+          return {
+            url,
+            erro: error instanceof Error ? error.message : 'Erro desconhecido'
+          };
+        }
+      })
     );
 
     res.json({
       empresa_id: empresa.id,
       empresa_nome: empresa.nome,
-      total_urls_extraidas: urlsExtraidas.length,
-      vagas_novas_processadas: vagasProcessadas,
-      vagas_desativadas: vagasDesativadas.length,
-      erros: erros.length > 0 ? erros : undefined
+      total_vagas: urls.length,
+      vagas_processadas: vagas.length,
+      vagas
     });
   } catch (error) {
-    console.error('Erro ao processar vagas:', error);
-    res.status(500).json({ error: 'Erro ao processar vagas' });
+    console.error('Erro ao extrair vagas:', error);
+    res.status(500).json({ error: 'Erro ao extrair vagas da empresa' });
   }
-}; 
+}
+
+export async function processarVagasEmpresa(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const empresa = await EmpresaService.buscarPorId(id);
+
+    if (empresa === null) {
+      res.status(404).json({ error: 'Empresa não encontrada' });
+      return;
+    }
+
+    // Adicionar empresa na fila de processamento
+    const jobData: JobData = {
+      empresa_id: parseInt(empresa.id.toString(), 10),
+      url: empresa.jobboard,
+      status: 'pendente',
+      tentativas: 0
+    };
+
+    await JobQueueService.adicionarNaFila(jobData);
+
+    res.json({ 
+      message: 'Empresa adicionada à fila de processamento',
+      empresa_id: empresa.id
+    });
+  } catch (error) {
+    console.error('Erro ao processar vagas da empresa:', error);
+    res.status(500).json({ error: 'Erro ao processar vagas da empresa' });
+  }
+} 

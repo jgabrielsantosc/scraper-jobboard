@@ -16,17 +16,7 @@ export const env = {
   FIRECRAWL_API_URL: process.env.FIRECRAWL_API_URL,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   
-  // Redis
-  REDIS_HOST: process.env.REDIS_HOST || 'localhost',
-  REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379'),
-  REDIS_USERNAME: process.env.REDIS_USERNAME || 'default',
-  REDIS_PASSWORD: process.env.REDIS_PASSWORD,
-  REDIS_TLS: process.env.REDIS_TLS === 'true',
-  
-  // PostgreSQL
-  POSTGRES_USER: process.env.POSTGRES_USER || 'jobcrawler',
-  POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || 'jobcrawler123',
-  POSTGRES_HOST: process.env.POSTGRES_HOST || 'localhost',
-  POSTGRES_PORT: parseInt(process.env.POSTGRES_PORT || '5432'),
-  POSTGRES_DB: process.env.POSTGRES_DB || 'jobcrawler'
+  // Supabase
+  SUPABASE_URL: process.env.SUPABASE_URL || 'https://xmunzrqufzoxrtgplzam.supabase.co',
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtdW56cnF1ZnpveHJ0Z3BsemFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc1MDM5NTEsImV4cCI6MjA1MzA3OTk1MX0.0-XIvQiUSeRD1AYFuqJhDa04OoKOLeSaIF_0oO_-gzY'
 };

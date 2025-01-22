@@ -1,19 +1,18 @@
-import { Pool } from 'pg';
+import { createClient } from '@supabase/supabase-js';
 import { env } from './env';
 
-export const pool = new Pool({
-  user: env.POSTGRES_USER,
-  password: env.POSTGRES_PASSWORD,
-  host: env.POSTGRES_HOST,
-  port: env.POSTGRES_PORT,
-  database: env.POSTGRES_DB,
-});
+export const supabase = createClient(
+  env.SUPABASE_URL,
+  env.SUPABASE_ANON_KEY
+);
 
 // Testar conexão
-pool.query('SELECT NOW()', (err) => {
-  if (err) {
-    console.error('Erro ao conectar ao PostgreSQL:', err);
-  } else {
-    console.log('Conexão com PostgreSQL estabelecida');
-  }
+Promise.resolve(
+  supabase.from('empresas').select('count').single()
+)
+.then(() => {
+  console.log('Conexão com Supabase estabelecida');
+})
+.catch((error: Error) => {
+  console.error('Erro ao conectar ao Supabase:', error.message);
 });

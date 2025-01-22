@@ -54,4 +54,13 @@ export interface DashboardStats {
   empresas_ativas: number;
   vagas_ativas: number;
   vagas_na_fila: number;
+}
+
+export interface JobData {
+  empresa_id: number;
+  url: string;
+  status: 'pendente' | 'processando' | 'concluido' | 'erro';
+  tentativas: number;
+  erro?: string;
+  data_processamento?: Date;
 } 

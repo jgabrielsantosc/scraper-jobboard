@@ -5,42 +5,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: npm run dev:api
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=development
       - PORT=3001
-      - REDIS_HOST=redis
-      - POSTGRES_HOST=postgres
-      - POSTGRES_USER=jobcrawler
-      - POSTGRES_PASSWORD=jobcrawler123
-      - POSTGRES_DB=jobcrawler
+      - API_BASE_URL=http://localhost:3001
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
+      - FIRECRAWL_API_URL=${FIRECRAWL_API_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
-      - ./src:/app/src
-      - ./package.json:/app/package.json
-    depends_on:
-      - redis
-      - postgres
-
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: npm run dev:worker
-    environment:
-      - NODE_ENV=development
-      - REDIS_HOST=redis
-      - POSTGRES_HOST=postgres
-      - POSTGRES_USER=jobcrawler
-      - POSTGRES_PASSWORD=jobcrawler123
-      - POSTGRES_DB=jobcrawler
-    volumes:
-      - ./src:/app/src
-      - ./package.json:/app/package.json
-    depends_on:
-      - redis
-      - postgres
+      - .:/app
+      - /app/node_modules
 
   frontend:
     build:
@@ -52,25 +30,3 @@ services:
       - NEXT_PUBLIC_API_URL=http://api:3001
     depends_on:
       - api
-
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-  postgres:
-    image: postgres:15-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=jobcrawler
-      - POSTGRES_PASSWORD=jobcrawler123
-      - POSTGRES_DB=jobcrawler
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  redis_data:
-  postgres_data:

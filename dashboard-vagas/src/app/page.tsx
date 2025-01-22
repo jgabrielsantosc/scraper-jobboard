@@ -130,7 +130,10 @@ async function VagasTable() {
           <TableHead>Área</TableHead>
           <TableHead>Senioridade</TableHead>
           <TableHead>Modelo de Trabalho</TableHead>
+          <TableHead>Modelo de Contrato</TableHead>
+          <TableHead>Localização</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Importado em</TableHead>
           <TableHead>Atualizado em</TableHead>
         </TableRow>
       </TableHeader>
@@ -146,16 +149,43 @@ async function VagasTable() {
                 {vaga.empresa_nome}
               </a>
             </TableCell>
-            <TableCell>{vaga.titulo}</TableCell>
+            <TableCell>
+              <a 
+                href={vaga.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:underline"
+              >
+                {vaga.titulo}
+              </a>
+            </TableCell>
             <TableCell>{vaga.area}</TableCell>
             <TableCell>{vaga.senioridade}</TableCell>
             <TableCell>{vaga.modelo_trabalho}</TableCell>
+            <TableCell>{vaga.modelo_contrato}</TableCell>
+            <TableCell>
+              {vaga.localizacao ? (
+                <div className="flex flex-col">
+                  {vaga.localizacao.cidade && <span>{vaga.localizacao.cidade}</span>}
+                  {vaga.localizacao.estado && <span>{vaga.localizacao.estado}</span>}
+                  {vaga.localizacao.pais && <span>{vaga.localizacao.pais}</span>}
+                </div>
+              ) : '-'}
+            </TableCell>
             <TableCell>{vaga.status ? 'Ativa' : 'Inativa'}</TableCell>
             <TableCell>
               <div className="flex flex-col">
-                <span>{new Date(vaga.atualizado_em).toLocaleDateString('pt-BR')}</span>
+                <span>{new Date(vaga.data_importacao).toLocaleDateString('pt-BR')}</span>
                 <span className="text-sm text-muted-foreground">
-                  {new Date(vaga.atualizado_em).toLocaleTimeString('pt-BR')}
+                  {new Date(vaga.data_importacao).toLocaleTimeString('pt-BR')}
+                </span>
+              </div>
+            </TableCell>
+            <TableCell>
+              <div className="flex flex-col">
+                <span>{new Date(vaga.updated_at).toLocaleDateString('pt-BR')}</span>
+                <span className="text-sm text-muted-foreground">
+                  {new Date(vaga.updated_at).toLocaleTimeString('pt-BR')}
                 </span>
               </div>
             </TableCell>
