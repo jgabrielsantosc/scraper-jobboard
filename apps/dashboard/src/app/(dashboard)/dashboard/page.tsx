@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Overview } from "@/components/dashboard/overview"
 import { RecentActivity } from "@/components/dashboard/recent-activity"
 import { createClient } from "@/lib/supabase/client"
+import { routeConfig } from '@/app/config'
 
 export default function DashboardPage() {
   return (
@@ -45,4 +46,5 @@ export default function DashboardPage() {
   )
 }
 
-export const dynamic = 'force-dynamic' 
+export const dynamic = routeConfig.dynamic
+export const revalidate = routeConfig.revalidate 

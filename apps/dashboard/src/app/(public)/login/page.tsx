@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import type { SupabaseError } from "@/types/supabase"
+import { routeConfig } from '@/app/config'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -88,4 +89,5 @@ export default function LoginPage() {
   )
 }
 
-export const dynamic = 'force-dynamic' 
+export const dynamic = routeConfig.dynamic
+export const revalidate = routeConfig.revalidate 
