@@ -1,17 +1,23 @@
 'use client'
 
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/^=/, '')
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.replace(/^=/, '')
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+if (!supabaseUrl) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL não está definida')
 }
 
-export function createClient() {
-  return createBrowserClient(
-    supabaseUrl as string,
-    supabaseAnonKey as string
-  )
+if (!supabaseKey) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY não está definida')
+}
+
+export const createClient = () => {
+  return createSupabaseClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    }
+  })
 } 
