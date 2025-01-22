@@ -22,19 +22,13 @@ export const apiLogger = async (req: Request, res: Response, next: NextFunction)
 
       const logData: ApiLog = {
         method: req.method,
-        route: req.path,
-        response_status: res.statusCode,
-        processing_time_ms: processingTime,
+        path: req.path,
+        status_code: res.statusCode,
+        response_time: processingTime,
         ip_address: req.ip || 'unknown',
-        request_headers: req.headers,
         request_body: req.body,
         response_body: res.locals.responseBody,
-        source_system: 'api',
-        metadata: {
-          user_agent: req.get('user-agent') || 'unknown',
-          query_params: req.query,
-          api_version: '1.0'
-        }
+        user_agent: req.get('user-agent') || 'unknown'
       }
 
       await supabase.from('api_logs').insert(logData)
