@@ -7,7 +7,9 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     outputFileTracingRoot: require('path').join(__dirname, '../../'),
-  }
+  },
+  // Desabilita a pré-renderização estática
+  staticPageGenerationTimeout: 0
 }
 
 module.exports = nextConfig 
