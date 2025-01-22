@@ -8,8 +8,7 @@
     "dev:dashboard": "pnpm --filter @job-scraper/dashboard dev",
     "build": "turbo run build",
     "start": "turbo run start",
-    "lint": "turbo run lint",
-    "postinstall": "pnpm --filter @job-scraper/api install-browsers"
+    "lint": "turbo run lint"
   },
   "devDependencies": {
     "turbo": "latest",

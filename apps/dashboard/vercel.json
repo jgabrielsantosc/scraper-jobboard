@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd apps/dashboard && npm i -g pnpm && pnpm install --ignore-scripts && pnpm build",
+  "buildCommand": "npm i -g pnpm && pnpm install --filter @job-scraper/dashboard --no-frozen-lockfile && pnpm build",
   "framework": "nextjs",
   "installCommand": null
 } 
