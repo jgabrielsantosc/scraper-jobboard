@@ -1,4 +1,4 @@
-# 🎯 Job Scraper Platform
+# 🎯 Job Scraper 
 
 Uma plataforma completa para coletar e gerenciar vagas de emprego de diferentes job boards de forma automatizada.
 
@@ -20,12 +20,6 @@ Interface web para visualização e gerenciamento das vagas. Principais caracter
 - Interface moderna e responsiva
 - Gerenciamento de scraping jobs
 
-## 🚀 Como Executar
-
-### Pré-requisitos
-- Node.js
-- pnpm (gerenciador de pacotes)
-- Docker (opcional)
 
 ### Instalação
 ```bash
