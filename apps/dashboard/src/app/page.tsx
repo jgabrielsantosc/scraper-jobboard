@@ -3,26 +3,21 @@ import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col">
+    <main className="flex min-h-screen flex-col bg-white p-4">
       {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center min-h-[80vh] px-4 text-center bg-gradient-to-b from-background to-muted">
-        <div className="container max-w-4xl">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight">
+      <section className="flex flex-col items-center justify-center min-h-[80vh] text-center">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold text-black mb-6">
             Automatize a coleta de vagas de emprego com facilidade
           </h1>
-          <p className="mt-6 text-xl text-muted-foreground">
+          <p className="text-lg text-gray-600 mb-8">
             Conecte-se aos principais job boards e extraia dados de vagas em segundos com a nossa API e Dashboard avançados.
           </p>
-          <div className="mt-10">
-            <Button asChild size="lg">
-              <Link href="/waitlist">
-                Entre na Waitlist
-              </Link>
-            </Button>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Garanta acesso antecipado ao Job Scraper
-            </p>
-          </div>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Link href="/waitlist">
+              Entre na Waitlist
+            </Link>
+          </Button>
         </div>
       </section>
 
