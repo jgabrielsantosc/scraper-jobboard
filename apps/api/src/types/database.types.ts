@@ -57,56 +57,44 @@ export type Database = {
         }
         Relationships: []
       }
-      api_logs: {
+      api_keys: {
         Row: {
-          created_at: string | null
-          error_message: string | null
           id: string
-          ip_address: string | null
-          metadata: Json | null
-          method: string
-          processing_time_ms: number | null
-          request_body: Json | null
-          request_headers: Json | null
-          response_body: Json | null
-          response_status: number
-          route: string
-          source_system: string | null
-          user_id: string | null
+          key: string
+          user_id: string
+          created_at: string
         }
         Insert: {
-          created_at?: string | null
-          error_message?: string | null
           id?: string
-          ip_address?: string | null
-          metadata?: Json | null
-          method: string
-          processing_time_ms?: number | null
-          request_body?: Json | null
-          request_headers?: Json | null
-          response_body?: Json | null
-          response_status: number
-          route: string
-          source_system?: string | null
-          user_id?: string | null
+          key: string
+          user_id: string
+          created_at?: string
         }
         Update: {
-          created_at?: string | null
-          error_message?: string | null
           id?: string
-          ip_address?: string | null
-          metadata?: Json | null
-          method?: string
-          processing_time_ms?: number | null
-          request_body?: Json | null
-          request_headers?: Json | null
-          response_body?: Json | null
-          response_status?: number
-          route?: string
-          source_system?: string | null
-          user_id?: string | null
+          key?: string
+          user_id?: string
+          created_at?: string
         }
-        Relationships: []
+      }
+      api_logs: {
+        Row: {
+          id: string
+          method: string
+          route: string
+          response_status: number
+          processing_time_ms: number
+          ip_address: string
+          request_headers: Record<string, any>
+          request_body: Record<string, any>
+          response_body: Record<string, any>
+          error_message?: string
+          source_system: string
+          metadata: Record<string, any>
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['api_logs']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['api_logs']['Insert']>
       }
       attribute_type_category: {
         Row: {
