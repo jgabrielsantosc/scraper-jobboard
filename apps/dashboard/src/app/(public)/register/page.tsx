@@ -119,5 +119,5 @@ export default function RegisterPage() {
   )
 }
 
-export const dynamic = routeConfig.dynamic
+export const dynamic = 'force-dynamic'
 export const revalidate = routeConfig.revalidate 
