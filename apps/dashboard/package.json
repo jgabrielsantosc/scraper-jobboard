@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node .next/standalone/server.js",
+    "docker:build": "docker build -t job-scraper-dashboard .",
+    "docker:push": "docker push your-registry/job-scraper-dashboard",
     "lint": "next lint"
   },
   "dependencies": {

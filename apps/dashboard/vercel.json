@@ -1,5 +1,0 @@
-{
-  "buildCommand": "npm i -g pnpm && pnpm install --filter @job-scraper/dashboard --no-frozen-lockfile && pnpm build",
-  "framework": "nextjs",
-  "installCommand": null
-} 

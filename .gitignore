@@ -42,3 +42,9 @@ Thumbs.db
 *.gz
 *.tmp
 .vercel
+
+# Next.js
+.next/
+out/
+.next/standalone/
+.next/static/
