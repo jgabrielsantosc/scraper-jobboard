@@ -4,7 +4,12 @@ const nextConfig = {
   experimental: {
     outputFileTracingRoot: require('path').join(__dirname, '../../'),
   },
-  transpilePackages: ['@job-scraper/shared'], // caso tenha packages compartilhados
+  transpilePackages: [
+    '@radix-ui/react-dialog',
+    '@radix-ui/react-dropdown-menu',
+    '@radix-ui/react-slot',
+    '@radix-ui/react-toast'
+  ]
 }
 
 module.exports = nextConfig 
