@@ -3,24 +3,24 @@
       "target": "es6",
       "module": "commonjs",
       "outDir": "./dist",
-      "rootDir": "./src",
+      "rootDir": "api/src",
       "strict": true,
       "esModuleInterop": true,
       "skipLibCheck": true,
       "forceConsistentCasingInFileNames": true,
       "resolveJsonModule": true,
       "moduleResolution": "node",
-      "baseUrl": "./src",
+      "baseUrl": "api/src",
       "paths": {
         "@/*": ["./*"]
       }
     },
     "include": [
-      "src/**/*.ts",
+      "api/src/**/*.ts",
       "playwright-extra.d.ts"
     ],
     "exclude": [
-      "node_modules",
+      "api/node_modules",
       "**/*.spec.ts"
     ]
   }

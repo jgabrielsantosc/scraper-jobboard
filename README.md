@@ -1,4 +1,4 @@
-# 🎯 Job Crawler API
+# 🎯 Job Scraper API
 
 Uma API para coletar vagas de emprego de diferentes job boards de forma automatizada.
 
