@@ -1,6 +1,12 @@
 {
-  "buildCommand": "cd apps/dashboard && pnpm install && pnpm build",
-  "outputDirectory": "apps/dashboard/.next",
-  "installCommand": "cd apps/dashboard && pnpm install",
-  "framework": "nextjs"
+  "buildCommand": "pnpm install --no-frozen-lockfile && NODE_ENV=development pnpm build",
+  "outputDirectory": ".next",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "framework": "nextjs",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
 } 

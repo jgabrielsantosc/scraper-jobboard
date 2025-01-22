@@ -10,3 +10,5 @@ README.md
 *.log
 .vscode
 .idea
+/apps/dashboard/.next
+/apps/dashboard/node_modules
