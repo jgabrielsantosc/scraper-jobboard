@@ -20,6 +20,8 @@ import { scraperJobHireroom } from './job-scraper-hireroom';
 import { scraperJobPandape } from './job-scraper-pandape';
 import { scraperJobIcims } from './job-scraper-icims';
 import { scraperJobRecruitee } from './job-scraper-recruitee';
+import { validateApiKey } from '../middleware/auth'
+import { apiLimiter } from '../middleware/rate-limit'
 
 type JobBoardScraper = ExpressHandler;
 
@@ -49,9 +51,23 @@ const greenhouseWrapper = (url: string) => {
   });
 };
 
+const withAuth = (handler: ExpressHandler): ExpressHandler => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await validateApiKey(req, res, async () => {
+        await apiLimiter(req, res, async () => {
+          await handler(req, res, next)
+        })
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+}
+
 const jobBoardScrapers: Record<string, JobBoardScraper> = {
-    'gupy.io': createScraperWrapper(scraperJobGupy),
-    'abler': scraperJobAbler,
+    'gupy.io': withAuth(createScraperWrapper(scraperJobGupy)),
+    'abler': withAuth(scraperJobAbler),
     'lever': createScraperWrapper(scraperJobLever),
     'inhire': createScraperWrapper(scraperJobInhire),
     'quickin': scraperJobQuickin,

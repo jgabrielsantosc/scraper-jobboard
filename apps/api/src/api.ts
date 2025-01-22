@@ -6,6 +6,9 @@ import { unifiedUrlScraper } from './routes/urls-scraper';
 import { jobAIAnalyzerHandler } from './routes/job-ai-analyzer';
 import dotenv from 'dotenv';
 import path from 'path';
+import { apiLimiter } from './middleware/rate-limit'
+import type { ExpressHandler } from './types';
+import { apiLogger } from './middleware/logger'
 
 // Carrega as variáveis de ambiente
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -29,8 +32,20 @@ const swaggerDocument = {
   info: {
     title: 'Job Scraper API',
     version: '1.0.0',
-    description: 'API para coletar informações de vagas de diferentes plataformas'
+    description: 'API para coletar informações de vagas de diferentes plataformas. Limite de 100 requisições por minuto por API key.'
   },
+  components: {
+    securitySchemes: {
+      ApiKeyAuth: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-api-key'
+      }
+    }
+  },
+  security: [
+    { ApiKeyAuth: [] }
+  ],
   paths: {
     '/scraper-job': {
       post: {
@@ -214,14 +229,11 @@ const swaggerDocument = {
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use(apiLogger);
 
-// Rota única para processar detalhes de qualquer job board
+// Rotas sem middleware de autenticação (já está nos handlers)
 app.post('/job-details', handleJobDetailsRequest);
-
-// Rota única para processar qualquer job board
 app.post('/scraper-job', unifiedUrlScraper);
-
-// Nova rota para análise com IA
 app.post('/job-ai-analysis', jobAIAnalyzerHandler);
 
 // Middleware de tratamento de erros
