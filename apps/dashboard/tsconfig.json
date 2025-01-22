@@ -25,13 +25,17 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@job-scraper/api/*": [
+        "../api/*"
       ]
     },
     "baseUrl": "."
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
     ".next/types/**/*.ts"
   ],
   "exclude": [

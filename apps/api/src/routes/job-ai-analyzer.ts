@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { ExpressHandler } from '../types';
 import { handleJobDetailsRequest } from './unified-job-details';
 import OpenAI from 'openai';
+import { validateApiKey } from '../middleware/auth'
+import { apiLimiter } from '../middleware/rate-limit'
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error('A variável de ambiente OPENAI_API_KEY é obrigatória');
@@ -27,42 +29,40 @@ interface AIAnalyzedJob {
   beneficios: string[];
 }
 
-export const jobAIAnalyzerHandler: ExpressHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const jobAIAnalyzerHandler: ExpressHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Primeiro, vamos obter os dados brutos da vaga usando o handler existente
-    const jobData: any = await new Promise((resolve, reject) => {
-      const mockRes = {
-        json: resolve,
-        status: function(code: number) {
-          if (code !== 200) {
-            reject(new Error(`Failed to fetch job data: ${code}`));
-          }
-          return this;
+    await validateApiKey(req, res, async () => {
+      await apiLimiter(req, res, async () => {
+        // Primeiro, vamos obter os dados brutos da vaga usando o handler existente
+        const jobData: any = await new Promise((resolve, reject) => {
+          const mockRes = {
+            json: resolve,
+            status: function(code: number) {
+              if (code !== 200) {
+                reject(new Error(`Failed to fetch job data: ${code}`));
+              }
+              return this;
+            }
+          } as Response;
+
+          // Criando um objeto Request compatível
+          const mockReq = Object.create(req, {
+            setTimeout: { value: () => {} },
+            destroy: { value: () => {} },
+            _read: { value: () => {} },
+            read: { value: () => {} }
+          });
+
+          handleJobDetailsRequest(mockReq, mockRes as Response, next);
+        });
+
+        if (!jobData) {
+          res.status(400).json({ error: 'Não foi possível obter os dados da vaga' });
+          return;
         }
-      } as Response;
 
-      // Criando um objeto Request compatível
-      const mockReq = Object.create(req, {
-        setTimeout: { value: () => {} },
-        destroy: { value: () => {} },
-        _read: { value: () => {} },
-        read: { value: () => {} }
-      });
-
-      handleJobDetailsRequest(mockReq, mockRes as Response, next);
-    });
-
-    if (!jobData) {
-      res.status(400).json({ error: 'Não foi possível obter os dados da vaga' });
-      return;
-    }
-
-    // Preparar o prompt para a OpenAI
-    const prompt = `Analise os seguintes dados de uma vaga de emprego e extraia APENAS as informações solicitadas em um formato estruturado:
+        // Preparar o prompt para a OpenAI
+        const prompt = `Analise os seguintes dados de uma vaga de emprego e extraia APENAS as informações solicitadas em um formato estruturado:
 
 ${JSON.stringify(jobData, null, 2)}
 
@@ -95,27 +95,29 @@ Observações importantes:
 9. Ordene os requisitos e benefícios por ordem de importância
 10. Remova requisitos ou benefícios duplicados ou muito similares`;
 
-    // Fazer a chamada para a OpenAI
-    const completion = await openai.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: "Você é um especialista em análise de vagas de emprego. Extraia APENAS as informações solicitadas e estruture-as exatamente no formato JSON especificado, seguindo todas as regras de padronização."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" }
-    });
+        // Fazer a chamada para a OpenAI
+        const completion = await openai.chat.completions.create({
+          messages: [
+            {
+              role: "system",
+              content: "Você é um especialista em análise de vagas de emprego. Extraia APENAS as informações solicitadas e estruture-as exatamente no formato JSON especificado, seguindo todas as regras de padronização."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          model: "gpt-4o-mini",
+          response_format: { type: "json_object" }
+        });
 
-    const aiAnalysis = JSON.parse(completion.choices[0].message.content || '{}');
+        const aiAnalysis = JSON.parse(completion.choices[0].message.content || '{}');
 
-    res.json(aiAnalysis);
+        res.json(aiAnalysis);
+      })
+    })
   } catch (error) {
-    console.error('Erro ao analisar vaga com IA:', error);
-    res.status(500).json({ error: 'Erro ao analisar vaga com IA' });
+    console.error('Erro ao analisar vaga com IA:', error)
+    res.status(500).json({ error: 'Erro ao analisar vaga com IA' })
   }
-}; 
+} 

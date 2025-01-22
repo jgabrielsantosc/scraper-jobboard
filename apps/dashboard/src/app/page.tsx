@@ -1,114 +1,67 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { PublicHeader } from "@/components/public-header"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col bg-white p-4">
-      {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center min-h-[80vh] text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold text-black mb-6">
-            Automatize a coleta de vagas de emprego com facilidade
-          </h1>
-          <p className="text-lg text-gray-600 mb-8">
-            Conecte-se aos principais job boards e extraia dados de vagas em segundos com a nossa API e Dashboard avançados.
-          </p>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Link href="/waitlist">
-              Entre na Waitlist
-            </Link>
-          </Button>
-        </div>
-      </section>
-
-      {/* Como Funciona */}
-      <section className="py-20 px-4 bg-muted/50">
-        <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-12">Como Funciona</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {[
-              "Cadastre o job board da sua empresa",
-              "Deixe nosso scraper coletar as URLs das vagas disponíveis",
-              "Receba os dados das vagas estruturados em um formato padronizado",
-              "Configure rotinas automáticas para manter seus dados sempre atualizados"
-            ].map((step, i) => (
-              <div key={i} className="flex flex-col items-center text-center">
-                <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center mb-4">
-                  {i + 1}
+    <div className="flex min-h-screen flex-col">
+      <PublicHeader />
+      <main className="flex-1">
+        <section className="space-y-6 pb-8 pt-32 md:pb-12 md:pt-40 lg:py-32">
+          <div className="container flex max-w-[64rem] flex-col items-center gap-4 text-center">
+            <h1 className="font-heading text-4xl font-bold sm:text-5xl md:text-6xl lg:text-7xl">
+              Automatize a coleta de vagas de emprego
+            </h1>
+            <p className="max-w-[42rem] leading-normal text-muted-foreground sm:text-xl sm:leading-8">
+              Conecte-se aos principais job boards e extraia dados de vagas em segundos com a nossa API e Dashboard avançados.
+            </p>
+            <div className="space-x-4">
+              <Link href="/dashboard">
+                <Button size="lg">Acessar Dashboard</Button>
+              </Link>
+              <Link href="/playground">
+                <Button variant="outline" size="lg">
+                  Testar API
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+        <section className="container space-y-6 py-8 md:py-12 lg:py-24">
+          <div className="mx-auto grid justify-center gap-4 sm:grid-cols-2 md:max-w-[64rem] md:grid-cols-3">
+            <div className="relative overflow-hidden rounded-lg border bg-background p-2">
+              <div className="flex h-[180px] flex-col justify-between rounded-md p-6">
+                <div className="space-y-2">
+                  <h3 className="font-bold">Múltiplos Job Boards</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Suporte para mais de 20 plataformas de vagas diferentes.
+                  </p>
                 </div>
-                <p className="text-lg">{step}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Principais Funcionalidades */}
-      <section className="py-20 px-4">
-        <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-12">Principais Funcionalidades</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Scraping de Job Boards",
-                description: "Extraia todas as URLs de vagas de mais de 20 plataformas suportadas."
-              },
-              {
-                title: "Análise Detalhada de Vagas",
-                description: "Transforme URLs em dados estruturados com informações como título, requisitos, localização, benefícios, e mais."
-              },
-              {
-                title: "Dashboard Intuitivo",
-                description: "Gerencie empresas, visualize logs, configure rotinas automáticas e analise métricas."
-              },
-              {
-                title: "Automação Completa",
-                description: "Configure tarefas recorrentes e otimize seu fluxo de coleta de dados."
-              },
-              {
-                title: "Logs e Monitoramento",
-                description: "Acompanhe o status do scraping e identifique possíveis problemas."
-              }
-            ].map((feature, i) => (
-              <div key={i} className="p-6 rounded-lg border bg-card">
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
+            </div>
+            <div className="relative overflow-hidden rounded-lg border bg-background p-2">
+              <div className="flex h-[180px] flex-col justify-between rounded-md p-6">
+                <div className="space-y-2">
+                  <h3 className="font-bold">API Simples</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Integração fácil com documentação completa.
+                  </p>
+                </div>
               </div>
-            ))}
+            </div>
+            <div className="relative overflow-hidden rounded-lg border bg-background p-2">
+              <div className="flex h-[180px] flex-col justify-between rounded-md p-6">
+                <div className="space-y-2">
+                  <h3 className="font-bold">Dashboard Intuitivo</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Gerencie suas coletas e visualize estatísticas.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Final */}
-      <section className="py-20 px-4 bg-muted">
-        <div className="container text-center">
-          <h2 className="text-3xl font-bold mb-6">
-            Pronto para revolucionar a forma como você coleta dados de vagas?
-          </h2>
-          <Button asChild size="lg">
-            <Link href="/waitlist">
-              Entre na Waitlist
-            </Link>
-          </Button>
-          <p className="mt-4 text-muted-foreground">
-            Receba atualizações e seja o primeiro a testar o Job Scraper
-          </p>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-8 px-4 border-t">
-        <div className="container flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">
-            © 2024 Job Scraper. Todos os direitos reservados.
-          </p>
-          <div className="flex gap-4">
-            <Link href="https://github.com/playwright-otv" className="text-sm text-muted-foreground hover:text-foreground">
-              GitHub
-            </Link>
-          </div>
-        </div>
-      </footer>
-    </main>
-  );
+        </section>
+      </main>
+    </div>
+  )
 }
