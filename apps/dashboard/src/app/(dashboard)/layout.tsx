@@ -36,7 +36,26 @@ export default function DashboardLayout({
     }
 
     checkAuth()
+
+    // Adiciona listener para mudanças no estado de autenticação
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        router.push('/login')
+      } else if (event === 'SIGNED_IN') {
+        router.refresh()
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [isMounted, router, supabase.auth])
+
+  if (!isMounted) {
+    return null // ou um loading state
+  }
 
   return (
     <div className="min-h-screen bg-gray-50/50">
