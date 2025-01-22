@@ -17,19 +17,21 @@ export const apiLogger = async (req: Request, res: Response, next: NextFunction)
   // Quando a resposta terminar
   res.on('finish', async () => {
     try {
+      const endTime = Date.now()
+      const processingTime = endTime - startTime
+
       const logData: ApiLog = {
         method: req.method,
         route: req.path,
         response_status: res.statusCode,
-        processing_time_ms: Date.now() - startTime,
-        ip_address: req.ip,
+        processing_time_ms: processingTime,
+        ip_address: req.ip || 'unknown',
         request_headers: req.headers,
         request_body: req.body,
-        response_body: res.locals.responseBody ? JSON.parse(res.locals.responseBody) : null,
-        error_message: res.locals.error,
+        response_body: res.locals.responseBody,
         source_system: 'api',
         metadata: {
-          user_agent: req.get('user-agent'),
+          user_agent: req.get('user-agent') || 'unknown',
           query_params: req.query,
           api_version: '1.0'
         }

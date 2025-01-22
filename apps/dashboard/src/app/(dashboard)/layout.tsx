@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
@@ -12,19 +12,31 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const [isMounted, setIsMounted] = useState(false)
   const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isMounted) return
+
     const checkAuth = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession()
-      
-      if (!session) {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (!session) {
+          router.push('/login')
+        }
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error)
         router.push('/login')
       }
     }
 
     checkAuth()
-  }, [router, supabase.auth])
+  }, [isMounted, router, supabase.auth])
 
   return (
     <div className="min-h-screen bg-gray-50/50">
