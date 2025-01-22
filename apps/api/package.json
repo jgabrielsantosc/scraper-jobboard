@@ -10,7 +10,7 @@
     "install-browsers": "playwright install chromium",
     "build:digitalocean": "npm ci && npm run prebuild && npm run build --verbose",
     "postbuild": "ls -R dist",
-    "dev": "ts-node src/index.ts",
+    "dev": "ts-node -r tsconfig-paths/register src/api.ts",
     "start:prod": "node dist/api.js",
     "prebuild": "npx playwright install chromium --with-deps",
     "postinstall": "playwright install chromium",
