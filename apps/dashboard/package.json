@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "node .next/standalone/server.js",
     "lint": "next lint",
-    "vercel-build": "next build"
+    "vercel-build": "pnpm install && next build"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
