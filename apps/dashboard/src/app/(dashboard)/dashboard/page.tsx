@@ -1,3 +1,5 @@
+'use client'
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Overview } from "@/components/dashboard/overview"
 import { RecentActivity } from "@/components/dashboard/recent-activity"
@@ -40,4 +42,6 @@ export default function DashboardPage() {
       </div>
     </div>
   )
-} 
+}
+
+export const dynamic = 'force-dynamic' 

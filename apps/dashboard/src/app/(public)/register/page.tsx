@@ -116,4 +116,6 @@ export default function RegisterPage() {
       </Card>
     </div>
   )
-} 
+}
+
+export const dynamic = 'force-dynamic' 

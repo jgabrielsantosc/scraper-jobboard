@@ -86,4 +86,6 @@ export default function LoginPage() {
       </Card>
     </div>
   )
-} 
+}
+
+export const dynamic = 'force-dynamic' 

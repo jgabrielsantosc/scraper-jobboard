@@ -1,20 +1,17 @@
-import { createClient } from '@supabase/supabase-js'
+'use client'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { Database } from '@/types/database.types'
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Faltam variáveis de ambiente do Supabase')
-}
+// Removendo a validação da URL já que o createClientComponentClient
+// gerencia isso internamente
+export const supabase = createClientComponentClient<Database>({
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+})
 
-// Validar se a URL está no formato correto
-try {
-  new URL(supabaseUrl)
-} catch (error) {
-  throw new Error(`URL do Supabase inválida: ${supabaseUrl}`)
-}
-
-console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-console.log('SUPABASE_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 5) + '...')
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey) 
+// Log para debug (remover em produção)
+if (process.env.NODE_ENV === 'development') {
+  console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+  console.log('SUPABASE_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 5) + '...')
+} 
