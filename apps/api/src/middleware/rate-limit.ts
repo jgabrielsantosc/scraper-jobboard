@@ -1,5 +1,6 @@
 import rateLimit from 'express-rate-limit'
 import { supabase } from '../lib/supabase'
+import type { Database } from '../types/database.types'
 
 // Função para verificar o plano do usuário pela API key
 async function getUserPlanLimits(apiKey: string) {

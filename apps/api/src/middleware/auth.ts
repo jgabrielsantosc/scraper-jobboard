@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express'
 import { supabase } from '../lib/supabase'
+import type { Database } from '../types/database.types'
 
 export async function validateApiKey(req: Request, res: Response, next: NextFunction) {
   const apiKey = req.headers['x-api-key']
 
-  if (!apiKey) {
+  if (!apiKey || Array.isArray(apiKey)) {
     return res.status(401).json({ error: 'API key is required' })
   }
 
