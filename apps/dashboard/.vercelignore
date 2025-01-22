@@ -4,4 +4,5 @@ node_modules
 .env.*
 !.env.production
 .turbo
-dist 
+dist
+.vercel 
