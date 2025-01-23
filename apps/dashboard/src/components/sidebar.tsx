@@ -12,6 +12,8 @@ import {
   Settings,
   Plug,
 } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
 
 const routes = [
   {
@@ -61,30 +63,38 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <div className="space-y-4 py-4 flex flex-col h-full bg-gray-900 text-white">
-      <div className="px-3 py-2 flex-1">
-        <Link href="/dashboard" className="flex items-center pl-3 mb-14">
-          <h1 className="text-2xl font-bold">
-            Job Scraper
-          </h1>
-        </Link>
-        <div className="space-y-1">
-          {routes.map((route) => (
-            <Link
-              key={route.href}
-              href={route.href}
-              className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-white/10 rounded-lg transition",
-                pathname === route.href ? "text-white bg-white/10" : "text-zinc-400"
-              )}
-            >
-              <div className="flex items-center flex-1">
-                <route.icon className={cn("h-5 w-5 mr-3", route.color)} />
-                {route.label}
-              </div>
-            </Link>
-          ))}
+    <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+      <div className="flex flex-col flex-grow bg-gray-50 overflow-y-auto border-r border-gray-200">
+        <div className="flex items-center h-16 flex-shrink-0 px-4 bg-white">
+          <Link href="/dashboard" className="flex items-center">
+            <h1 className="text-xl font-semibold text-gray-900 truncate">Job Scraper</h1>
+          </Link>
         </div>
+        <ScrollArea className="flex-1 py-4">
+          <nav className="flex-1 px-3 space-y-0.5">
+            {routes.map((route) => {
+              const isActive = pathname === route.href
+              return (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  className={cn(
+                    "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    "hover:bg-gray-100",
+                    isActive 
+                      ? "bg-gray-100 text-gray-900" 
+                      : "text-gray-600 hover:text-gray-900"
+                  )}
+                >
+                  <route.icon className={cn("h-5 w-5 mr-3 transition-colors", 
+                    isActive ? route.color : "text-gray-400"
+                  )} />
+                  <span className="truncate">{route.label}</span>
+                </Link>
+              )
+            })}
+          </nav>
+        </ScrollArea>
       </div>
     </div>
   )

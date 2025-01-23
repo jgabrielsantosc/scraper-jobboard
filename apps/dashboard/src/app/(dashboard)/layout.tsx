@@ -32,12 +32,14 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="min-h-screen bg-white">
       <Sidebar />
-      <div className="flex-1">
+      <div className="md:pl-64">
         <Header />
-        <main className="p-4">
-          {children}
+        <main className="py-8">
+          <div className="px-6 sm:px-8 lg:px-10 max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

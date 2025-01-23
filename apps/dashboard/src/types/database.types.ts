@@ -257,6 +257,60 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          field_mapping: Json
+          id: string
+          metadata: Json | null
+          processed_records: number | null
+          provider: string
+          source_id: string
+          started_at: string | null
+          status: string
+          target_type: string
+          total_records: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          field_mapping: Json
+          id?: string
+          metadata?: Json | null
+          processed_records?: number | null
+          provider: string
+          source_id: string
+          started_at?: string | null
+          status?: string
+          target_type: string
+          total_records?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          field_mapping?: Json
+          id?: string
+          metadata?: Json | null
+          processed_records?: number | null
+          provider?: string
+          source_id?: string
+          started_at?: string | null
+          status?: string
+          target_type?: string
+          total_records?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           created_at: string
@@ -387,6 +441,27 @@ export type Database = {
           "": string
         }
         Returns: string[]
+      }
+      start_airtable_sync: {
+        Args: {
+          p_user_id: string
+          p_base_id: string
+          p_table_id: string
+          p_type: string
+          p_field_mapping: Json
+          p_metadata: Json
+        }
+        Returns: string
+      }
+      sync_airtable_data: {
+        Args: {
+          p_user_id: string
+          p_base_id: string
+          p_table_id: string
+          p_type: string
+          p_field_mapping: Json
+        }
+        Returns: undefined
       }
     }
     Enums: {
