@@ -10,6 +10,7 @@ import {
   Activity,
   Key,
   Settings,
+  Plug,
 } from "lucide-react"
 
 const routes = [
@@ -42,6 +43,12 @@ const routes = [
     icon: Key,
     color: "text-emerald-500",
     href: "/api-keys",
+  },
+  {
+    label: "Integrações",
+    icon: Plug,
+    color: "text-blue-500",
+    href: "/integrations",
   },
   {
     label: "Configurações",

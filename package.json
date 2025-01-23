@@ -8,7 +8,10 @@
     "dev:dashboard": "pnpm --filter @job-scraper/dashboard dev",
     "build": "turbo run build",
     "start": "turbo run start",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "db:start": "docker-compose up -d",
+    "db:stop": "docker-compose down",
+    "db:reset": "docker-compose down -v && docker-compose up -d"
   },
   "devDependencies": {
     "turbo": "latest",

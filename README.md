@@ -58,6 +58,32 @@ Cada aplicação possui sua própria documentação detalhada:
 
 Cada aplicação possui seu próprio conjunto de variáveis de ambiente. Consulte os READMEs específicos de cada app para mais detalhes.
 
+## Desenvolvimento Local
+
+### Pré-requisitos
+- Supabase CLI
+- Node.js 18+
+- pnpm
+
+### Configuração
+
+1. Instale o Supabase CLI:
+```bash
+brew install supabase/tap/supabase
+```
+
+2. Inicie o Supabase:
+```bash
+supabase start
+```
+
+3. Configure as variáveis de ambiente em `.env.local` com as chaves fornecidas
+
+4. Inicie o projeto:
+```bash
+pnpm dev
+```
+
 ---
 
 Desenvolvido com ❤️ por [João Santos](https://github.com/joaogsantosc)

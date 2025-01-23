@@ -283,6 +283,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_secret: {
+        Args: {
+          secret_name: string
+        }
+        Returns: string
+      }
       gtrgm_compress: {
         Args: {
           "": unknown
@@ -334,6 +340,14 @@ export type Database = {
           "": string
         }
         Returns: string[]
+      }
+      store_secret: {
+        Args: {
+          secret_name: string
+          secret_value: string
+          secret_metadata?: Json
+        }
+        Returns: string
       }
     }
     Enums: {

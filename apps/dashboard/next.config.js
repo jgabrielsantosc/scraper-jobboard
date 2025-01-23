@@ -9,7 +9,10 @@ const nextConfig = {
     outputFileTracingRoot: require('path').join(__dirname, '../../'),
   },
   // Desabilita a pré-renderização estática
-  staticPageGenerationTimeout: 0
+  staticPageGenerationTimeout: 0,
+  images: {
+    domains: ['img.logo.dev'],
+  },
 }
 
 module.exports = nextConfig 
