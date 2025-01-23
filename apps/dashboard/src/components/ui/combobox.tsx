@@ -26,6 +26,7 @@ interface ComboboxProps {
   emptyText?: string
   searchPlaceholder?: string
   className?: string
+  disabled?: boolean
 }
 
 export function Combobox({
@@ -36,6 +37,7 @@ export function Combobox({
   emptyText = "Nenhum item encontrado.",
   searchPlaceholder = "Buscar item...",
   className,
+  disabled = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -47,6 +49,7 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
+          disabled={disabled}
         >
           {value
             ? options.find((option) => option.value === value)?.label
@@ -67,6 +70,7 @@ export function Combobox({
                   onValueChange(currentValue === value ? "" : currentValue)
                   setOpen(false)
                 }}
+                disabled={disabled}
               >
                 <Check
                   className={cn(

@@ -5,10 +5,13 @@ import { listBases, getBaseSchema } from '@/lib/airtable/api'
 import type { Database } from '@/types/database.types'
 import { useAuth } from './useAuth'
 import { useNotification } from "@/hooks/use-notification"
+import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 type Integration = Database['public']['Tables']['integrations']['Row']
 type IntegrationInsert = Database['public']['Tables']['integrations']['Insert']
 type Json = Database['public']['Tables']['integrations']['Row']['config']
+type SyncJob = Database['public']['Tables']['sync_jobs']['Row']
 
 interface AirtableConfig {
   apiKey: string;
@@ -26,7 +29,51 @@ interface AirtableIntegrationState {
   error: Error | null;
   bases: any[];
   savedIntegrations: Integration[];
+  currentJob: SyncJob | null;
+  savedApiKey: string | null;
 }
+
+interface NotificationHandlers {
+  onSuccess?: (message: string) => void;
+  onError?: (message: string) => void;
+}
+
+type RealtimePayload = RealtimePostgresChangesPayload<SyncJob>
+
+interface SyncAirtableDataParams {
+  p_user_id: string;
+  p_base_id: string;
+  p_table_id: string;
+  p_type: string;
+  p_field_mapping: Json;
+  p_metadata?: Record<string, any>;
+}
+
+interface AuthError {
+  http_code: number;
+  message: string;
+}
+
+interface ErrorResponse {
+  error: AuthError;
+}
+
+const handleError = (error: unknown): ErrorResponse => {
+  if (error instanceof Error) {
+    return {
+      error: {
+        http_code: 500,
+        message: error.message
+      }
+    };
+  }
+  return {
+    error: {
+      http_code: 500,
+      message: 'Erro desconhecido'
+    }
+  };
+};
 
 export function useAirtableIntegration() {
   const [state, setState] = useState<AirtableIntegrationState>({
@@ -34,55 +81,119 @@ export function useAirtableIntegration() {
     isLoading: true,
     error: null,
     bases: [],
-    savedIntegrations: []
+    savedIntegrations: [],
+    currentJob: null,
+    savedApiKey: null
   });
   const { toast } = useToast();
   const { user } = useAuth();
   const notification = useNotification();
 
+  // Log do status do usuário
+  useEffect(() => {
+    console.group('🔐 Status de Autenticação');
+    if (user) {
+      console.log('✅ Usuário autenticado:', {
+        id: user.id,
+        email: user.email,
+        lastSignIn: user.last_sign_in_at
+      });
+    } else {
+      console.log('❌ Usuário não autenticado');
+    }
+    console.groupEnd();
+  }, [user]);
+
   const loadIntegration = useCallback(async () => {
-    if (!user?.id) return;
+    console.group('📥 Carregando Integrações');
+    console.log('🔍 Verificando usuário...');
+
+    if (!user?.id) {
+      console.log('❌ Usuário não encontrado');
+      console.groupEnd();
+      const response = handleError(new Error('Você precisa estar logado para carregar as integrações'));
+      setState(prev => ({
+        ...prev,
+        error: new Error(response.error.message),
+        isLoading: false
+      }));
+      return;
+    }
+
+    console.log('✅ Usuário encontrado:', user.id);
 
     try {
-      // Carregar todas as integrações do usuário
+      console.log('🔄 Buscando integrações do usuário...');
       const { data, error } = await browserClient
         .from('integrations')
         .select('*')
         .eq('provider', 'airtable')
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao buscar integrações:', error);
+        console.groupEnd();
+        const response = handleError(error);
+        setState(prev => ({
+          ...prev,
+          error: new Error(response.error.message),
+          isLoading: false
+        }));
+        return;
+      }
 
       const integrations = data as unknown as Integration[];
+      console.log('✅ Integrações encontradas:', integrations.length);
       
-      // Se houver integrações, carrega a última configuração ativa
       const lastActiveIntegration = integrations.find(i => i.is_active);
+      console.log('🔍 Integração ativa:', lastActiveIntegration ? 'Sim' : 'Não');
       
       if (lastActiveIntegration?.config) {
         const config = lastActiveIntegration.config as unknown as AirtableConfig;
         if (config.apiKey) {
-          const bases = await listBases(config.apiKey);
-          setState(prev => ({
-            ...prev,
-            config,
-            bases,
-            savedIntegrations: integrations,
-            isLoading: false
-          }));
-          return;
+          try {
+            console.log('🔄 Carregando bases do Airtable...');
+            const bases = await listBases(config.apiKey);
+            console.log('✅ Bases carregadas:', bases.length);
+            setState(prev => ({
+              ...prev,
+              config,
+              bases,
+              savedIntegrations: integrations,
+              savedApiKey: config.apiKey,
+              isLoading: false,
+              error: null
+            }));
+            console.groupEnd();
+            return;
+          } catch (error) {
+            console.error('❌ Erro ao carregar bases:', error);
+            console.groupEnd();
+            const response = handleError(error);
+            setState(prev => ({
+              ...prev,
+              error: new Error(response.error.message),
+              isLoading: false
+            }));
+            return;
+          }
         }
       }
 
       setState(prev => ({ 
         ...prev, 
         savedIntegrations: integrations,
-        isLoading: false 
+        isLoading: false,
+        error: null
       }));
+      console.groupEnd();
     } catch (error) {
-      console.error('Erro ao carregar integrações:', error);
+      console.error('❌ Erro geral:', error);
+      console.groupEnd();
+      const response = handleError(error);
       setState(prev => ({
         ...prev,
-        error: error as Error,
+        error: new Error(response.error.message),
         isLoading: false
       }));
     }
@@ -94,65 +205,63 @@ export function useAirtableIntegration() {
     }
   }, [user?.id, loadIntegration]);
 
-  const updateApiKey = async (apiKey: string) => {
-    if (!user?.id) return false;
+  const updateApiKey = useCallback(async (apiKey: string) => {
+    logger.group('Atualizando API Key')
+    logger.auth('Verificando autenticação do usuário')
 
-    setState(prev => ({ ...prev, isLoading: true }));
-    
+    if (!user?.id) {
+      logger.error('Usuário não autenticado')
+      throw new Error('Usuário não autenticado')
+    }
+
     try {
-      const bases = await notification.promise(
-        listBases(apiKey),
-        {
-          loading: "Verificando chave API...",
-          success: "Chave API válida!",
-          error: "Chave API inválida"
-        }
-      );
-
-      const config: AirtableConfig = { apiKey };
+      logger.api('POST', '/api/integrations/airtable/config', { userId: user.id })
       
-      const integrationData: IntegrationInsert = {
-        user_id: user.id,
-        provider: 'airtable',
-        config: config as unknown as Json,
-        is_active: true
-      };
-
-      await browserClient
+      // Primeiro carrega as bases para validar a API key
+      const bases = await listBases(apiKey)
+      
+      const { error } = await browserClient
         .from('integrations')
-        .upsert(integrationData);
+        .upsert({
+          user_id: user.id,
+          provider: 'airtable',
+          config: { apiKey }
+        });
 
+      if (error) {
+        logger.error('Erro ao salvar configuração', error)
+        throw error
+      }
+
+      logger.success('API Key atualizada com sucesso')
       setState(prev => ({
         ...prev,
-        config,
+        config: { apiKey } as AirtableConfig,
         bases: Array.isArray(bases) ? bases : [bases],
+        savedApiKey: apiKey,
         isLoading: false,
         error: null
-      }));
-
-      notification.success("Integração configurada", {
-        description: "Sua integração com Airtable foi configurada com sucesso!"
-      });
-
-      return true;
+      }))
+      
+      return true
     } catch (error) {
-      console.error('Erro ao atualizar integração:', error);
-      setState(prev => ({
-        ...prev,
-        error: error as Error,
-        isLoading: false
-      }));
+      logger.error('Falha ao atualizar API Key', error)
+      throw error
+    } finally {
+      logger.groupEnd()
+    }
+  }, [user?.id]);
 
-      notification.error("Falha na configuração", {
-        description: "Verifique sua chave API e tente novamente."
+  const updateConfig = useCallback(async (newConfig: Partial<AirtableConfig>) => {
+    if (!user?.id || !state.config) {
+      const response = handleError(new Error('Você precisa estar logado e ter uma configuração válida'));
+      toast({
+        title: "Erro",
+        description: response.error.message,
+        variant: "destructive",
       });
-
       return false;
     }
-  };
-
-  const updateConfig = async (newConfig: Partial<AirtableConfig>) => {
-    if (!user?.id || !state.config) return false;
 
     try {
       const updatedConfig = { ...state.config, ...newConfig };
@@ -168,7 +277,15 @@ export function useAirtableIntegration() {
         .from('integrations')
         .upsert(integrationData);
 
-      if (error) throw error;
+      if (error) {
+        const response = handleError(error);
+        toast({
+          title: "Erro",
+          description: response.error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
 
       setState(prev => ({
         ...prev,
@@ -177,63 +294,114 @@ export function useAirtableIntegration() {
 
       return true;
     } catch (error) {
-      console.error('Erro ao atualizar configuração:', error);
+      const response = handleError(error);
       toast({
         title: "Erro",
-        description: "Falha ao atualizar configuração.",
+        description: response.error.message,
         variant: "destructive",
       });
       return false;
     }
-  };
+  }, [user?.id, state.config, toast]);
 
-  const syncData = async (
-    baseId: string, 
-    tableId: string, 
-    type: 'companies' | 'jobs',
-    fieldMapping: Record<string, string>
+  const subscribeToJobUpdates = useCallback(
+    (jobId: string, handlers?: NotificationHandlers) => {
+      const channel = browserClient
+        .channel(`sync_job:${jobId}`)
+        .on<RealtimePayload>(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'sync_jobs',
+            filter: `id=eq.${jobId}`,
+          },
+          (payload) => {
+            if (!payload.new) return;
+            const job = payload.new as SyncJob;
+            setState(prev => ({ ...prev, currentJob: job }));
+
+            if (job.status === 'completed') {
+              handlers?.onSuccess?.(
+                `${job.processed_records} registros processados com sucesso`
+              );
+            } else if (job.status === 'error') {
+              handlers?.onError?.(
+                job.error_message || 'Erro desconhecido'
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        browserClient.removeChannel(channel);
+      };
+    },
+    []
+  );
+
+  const startSync = useCallback(async (
+    config: {
+      baseId: string
+      tableId: string
+      type: string
+      fieldMapping: Record<string, string>
+    },
+    metadata?: Record<string, any>,
+    handlers?: NotificationHandlers
   ) => {
-    if (!user?.id || !state.config?.apiKey) return false;
+    logger.group('Iniciando processo de sincronização')
+    logger.auth('Verificando autenticação do usuário')
+
+    if (!user?.id || !state.config?.apiKey) {
+      logger.error('Usuário não autenticado ou API Key não configurada')
+      throw new Error('Você precisa estar logado e ter uma API key configurada')
+    }
 
     try {
-      // 1. Atualizar configuração
-      await updateConfig({
-        baseId,
-        tableName: tableId,
-        type,
-        mappings: fieldMapping
-      });
+      logger.api('POST', '/api/integrations/airtable/sync', { 
+        userId: user.id,
+        config,
+        metadata 
+      })
 
-      // 2. Iniciar sincronização
-      const { error } = await browserClient.rpc('sync_airtable_data', {
+      const { data: jobId, error } = await browserClient.rpc('sync_airtable_data', {
         p_user_id: user.id,
-        p_base_id: baseId,
-        p_table_id: tableId,
-        p_type: type,
-        p_field_mapping: fieldMapping
+        p_base_id: config.baseId,
+        p_table_id: config.tableId,
+        p_type: config.type,
+        p_field_mapping: config.fieldMapping as unknown as Json
       });
 
-      if (error) throw error;
+      if (error) {
+        logger.error('Erro ao iniciar sincronização', error)
+        handlers?.onError?.(error.message)
+        throw error
+      }
 
-      notification.success("Sincronização iniciada", {
-        description: "Os dados começarão a ser sincronizados em breve."
-      });
-
-      return true;
+      if (typeof jobId === 'string') {
+        logger.success('Job de sincronização criado', jobId)
+        subscribeToJobUpdates(jobId)
+        handlers?.onSuccess?.('Sincronização iniciada com sucesso')
+        return jobId
+      } else {
+        logger.error('ID do job inválido')
+        throw new Error('ID do job inválido')
+      }
     } catch (error) {
-      console.error('Erro ao sincronizar dados:', error);
-      notification.error("Falha na sincronização", {
-        description: "Não foi possível iniciar a sincronização dos dados."
-      });
-      return false;
+      logger.error('Falha ao iniciar sincronização', error)
+      throw error
+    } finally {
+      logger.groupEnd()
     }
-  };
+  }, [user?.id, state.config?.apiKey, subscribeToJobUpdates]);
 
   return {
     ...state,
     updateApiKey,
     updateConfig,
-    syncData,
+    startSync,
     loadIntegration
   };
 } 
