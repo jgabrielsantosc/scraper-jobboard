@@ -1,6 +1,7 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
+import { browserClient } from '@/lib/supabase/client'
+
 import { useRouter } from "next/navigation"
 import {
   DropdownMenu,
@@ -15,10 +16,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 export function UserNav() {
   const router = useRouter()
-  const supabase = createClient()
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await browserClient.auth.signOut()
     router.push('/login')
   }
 

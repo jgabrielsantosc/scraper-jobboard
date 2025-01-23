@@ -1,61 +1,43 @@
 'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { browserClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import type { SupabaseError } from "@/types/supabase"
-import { routeConfig } from '@/app/config'
 
 export default function RegisterPage() {
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  const supabase = createClient()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
-
+    
     try {
-      // 1. Criar usuário
-      const { error: signUpError, data } = await supabase.auth.signUp({
+      const { error } = await browserClient.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            full_name: name,
-          },
-        },
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
       })
 
-      if (signUpError) throw signUpError
-
-      // 2. Criar perfil do usuário
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: data.user?.id,
-          full_name: name,
-          email,
-        })
-
-      if (profileError) throw profileError
+      if (error) throw error
 
       toast({
-        title: "Conta criada com sucesso!",
-        description: "Você será redirecionado para o dashboard.",
+        title: "Sucesso!",
+        description: "Verifique seu email para confirmar o cadastro.",
       })
 
-      router.push('/dashboard')
-      router.refresh()
+      router.push('/login')
     } catch (error) {
       const supabaseError = error as SupabaseError
       toast({
@@ -72,24 +54,18 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Crie sua conta</CardTitle>
+          <CardTitle>Criar conta</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSignUp} className="space-y-4">
             <div className="space-y-2">
-              <Input
-                type="text"
-                placeholder="Nome completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
               <Input
                 type="email"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
               />
               <Input
                 type="password"
@@ -97,6 +73,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="new-password"
               />
             </div>
             <Button 
@@ -104,12 +81,12 @@ export default function RegisterPage() {
               className="w-full" 
               disabled={loading}
             >
-              {loading ? 'Criando conta...' : 'Criar conta'}
+              {loading ? 'Criando...' : 'Criar conta'}
             </Button>
             <p className="text-center text-sm text-gray-600">
               Já tem uma conta?{' '}
               <Link href="/login" className="text-orange-600 hover:text-orange-500">
-                Faça login
+                Entre aqui
               </Link>
             </p>
           </form>
@@ -119,5 +96,4 @@ export default function RegisterPage() {
   )
 }
 
-export const dynamic = 'force-dynamic'
-export const revalidate = routeConfig.revalidate 
+export const dynamic = 'force-dynamic' 

@@ -134,6 +134,36 @@ export type Database = {
         }
         Relationships: []
       }
+      integrations: {
+        Row: {
+          config: Json
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          provider: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           area: string | null
@@ -271,8 +301,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      get_api_key: {
+        Args: {
+          p_user_id: string
+          p_name: string
+        }
+        Returns: string
+      }
       get_dashboard_stats: {
-        Args: Record<PropertyKey, never>
+        Args: {
+          p_user_id: string
+        }
         Returns: Json
       }
       get_next_job: {
@@ -325,6 +364,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_api_key: {
+        Args: {
+          p_user_id: string
+          p_key: string
+          p_name: string
+        }
+        Returns: string
+      }
       set_limit: {
         Args: {
           "": number
@@ -340,14 +387,6 @@ export type Database = {
           "": string
         }
         Returns: string[]
-      }
-      store_secret: {
-        Args: {
-          secret_name: string
-          secret_value: string
-          secret_metadata?: Json
-        }
-        Returns: string
       }
     }
     Enums: {

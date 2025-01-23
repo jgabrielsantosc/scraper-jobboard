@@ -1,24 +1,7 @@
 'use client'
 
-import { createClient } from '@supabase/supabase-js'
-import type { Database } from './../../types/database.types'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { Database } from '@/types/database.types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase configuration')
-}
-
-const supabase = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  }
-)
-
-export { supabase } 
+// Exporta uma única instância do cliente para uso em toda a aplicação
+export const browserClient = createClientComponentClient<Database>() 

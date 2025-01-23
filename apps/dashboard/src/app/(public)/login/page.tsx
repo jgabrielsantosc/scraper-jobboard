@@ -1,38 +1,41 @@
 'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { browserClient } from '@/lib/supabase/client'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import type { SupabaseError } from "@/types/supabase"
-import { routeConfig } from '@/app/config'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
-  const supabase = createClient()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
-
+    
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await browserClient.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
 
-      router.push('/dashboard')
+      // Aguarda a sessão ser atualizada
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      const redirectTo = searchParams.get('redirectTo') || '/dashboard'
       router.refresh()
+      router.push(redirectTo)
     } catch (error) {
       const supabaseError = error as SupabaseError
       toast({
@@ -52,7 +55,7 @@ export default function LoginPage() {
           <CardTitle>Entre na sua conta</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-2">
               <Input
                 type="email"
@@ -60,6 +63,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
               />
               <Input
                 type="password"
@@ -67,6 +71,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
               />
             </div>
             <Button 
@@ -89,5 +94,4 @@ export default function LoginPage() {
   )
 }
 
-export const dynamic = 'force-dynamic'
-export const revalidate = routeConfig.revalidate 
+export const dynamic = 'force-dynamic' 

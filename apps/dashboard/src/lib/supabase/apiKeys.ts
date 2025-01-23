@@ -1,77 +1,43 @@
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './../../types/database.types';
+import { browserClient } from './client'
+import type { Database } from '@/types/database.types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+type SaveApiKeyFunction = Database['public']['Functions']['save_api_key']
+type GetApiKeyFunction = Database['public']['Functions']['get_api_key']
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase configuration');
-}
-
-const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
-
-export async function saveApiKey(userId: string, apiKey: string, baseId: string) {
-  console.log('📥 Iniciando saveApiKey...', { userId, baseIdExists: !!baseId });
-
+export async function saveApiKey(
+  userId: string, 
+  apiKey: string, 
+  name: string
+): Promise<SaveApiKeyFunction['Returns']> {
   try {
-    console.log('🔐 Chamando RPC store_secret...');
-    const { data, error } = await supabase.rpc('store_secret', {
-      secret_name: `airtable_key_${userId}`,
-      secret_value: apiKey,
-      secret_metadata: {
-        base_id: baseId,
-        user_id: userId,
-        service: 'airtable',
-        created_at: new Date().toISOString()
-      }
-    });
+    const { data, error } = await browserClient.rpc('save_api_key', {
+      p_user_id: userId,
+      p_key: apiKey,
+      p_name: name
+    })
 
-    if (error) {
-      console.error('❌ Erro no store_secret:', {
-        errorMessage: error.message,
-        errorCode: error.code,
-        errorDetails: error.details,
-        hint: error.hint
-      });
-      throw error;
-    }
-
-    console.log('✅ Chave salva com sucesso:', { result: data });
-    return data;
+    if (error) throw error
+    return data
   } catch (error) {
-    console.error('❌ Erro ao processar saveApiKey:', error);
-    throw new Error(
-      error instanceof Error 
-        ? `Falha ao salvar chave: ${error.message}`
-        : 'Falha ao salvar chave da API'
-    );
+    console.error('Erro ao salvar API key:', error)
+    throw error
   }
 }
 
-export async function getApiKey(userId: string): Promise<string | null> {
-  console.log('🔍 Buscando API key para usuário:', userId);
-
+export async function getApiKey(
+  userId: string, 
+  name: string
+): Promise<GetApiKeyFunction['Returns'] | null> {
   try {
-    const { data, error } = await supabase.rpc('get_secret', {
-      secret_name: `airtable_key_${userId}`
-    });
+    const { data, error } = await browserClient.rpc('get_api_key', {
+      p_user_id: userId,
+      p_name: name
+    })
 
-    if (error) {
-      console.error('❌ Erro ao buscar chave:', {
-        errorMessage: error.message,
-        errorCode: error.code,
-        errorDetails: error.details
-      });
-      return null;
-    }
-
-    console.log('✅ Chave recuperada com sucesso');
-    return data;
+    if (error) return null
+    return data
   } catch (error) {
-    console.error('❌ Erro ao processar getApiKey:', {
-      error,
-      errorMessage: error instanceof Error ? error.message : 'Erro desconhecido'
-    });
-    return null;
+    console.error('Erro ao buscar API key:', error)
+    return null
   }
 } 

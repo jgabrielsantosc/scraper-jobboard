@@ -1,100 +1,116 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { browserClient } from '@/lib/supabase/client'
+import type { Database } from '@/types/database.types'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Overview } from "@/components/dashboard/overview"
-import { RecentActivity } from "@/components/dashboard/recent-activity"
-import { createClient } from "@/lib/supabase/client"
-import { routeConfig } from '@/app/config'
+import { useToast } from "@/hooks/use-toast"
+
+type Job = Database['public']['Tables']['jobs']['Row']
 
 interface DashboardStats {
-  totalRequests: number
   totalJobs: number
-  requestsGrowth: number
-  jobsGrowth: number
+  totalRequests: number
+  recentJobs: Job[]
 }
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
-    totalRequests: 0,
     totalJobs: 0,
-    requestsGrowth: 0,
-    jobsGrowth: 0
+    totalRequests: 0,
+    recentJobs: []
   })
-  
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
   useEffect(() => {
-    const supabase = createClient()
-    
-    const fetchDashboardData = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) return
+    async function loadDashboardData() {
+      try {
+        const { data: { session } } = await browserClient.auth.getSession()
+        if (!session?.user) return
 
-      // Buscar total de requisições (api_logs)
-      const { count: totalRequests } = await supabase
-        .from('api_logs')
-        .select('*', { count: 'exact' })
-        .eq('user_id', user.id)
+        const { data, error } = await browserClient.rpc(
+          'get_dashboard_stats',
+          { p_user_id: session.user.id }
+        )
 
-      // Buscar total de vagas
-      const { count: totalJobs } = await supabase
-        .from('job')
-        .select('*', { count: 'exact' })
+        if (error) throw error
 
-      // Calcular crescimento (exemplo simplificado)
-      // Em um caso real, você precisaria comparar com o mês anterior
-      const requestsGrowth = 20.1
-      const jobsGrowth = 10.5
-
-      setStats({
-        totalRequests: totalRequests || 0,
-        totalJobs: totalJobs || 0,
-        requestsGrowth,
-        jobsGrowth
-      })
+        // Validar e converter o retorno Json
+        if (
+          typeof data === 'object' && 
+          data !== null && 
+          'totalJobs' in data && 
+          'totalRequests' in data && 
+          'recentJobs' in data &&
+          Array.isArray(data.recentJobs)
+        ) {
+          setStats(data as unknown as DashboardStats)
+        } else {
+          throw new Error('Formato de dados inválido')
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar dados do dashboard",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
     }
 
-    fetchDashboardData()
-  }, [])
+    loadDashboardData()
+  }, [toast])
+
+  if (loading) {
+    return <div>Carregando...</div>
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-      </div>
+      <h1 className="text-2xl font-bold">Dashboard</h1>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total de Requisições</CardTitle>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total de Vagas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalRequests.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              +{stats.requestsGrowth}% em relação ao mês passado
-            </p>
+            <p className="text-2xl font-bold">{stats.totalJobs}</p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Vagas Coletadas</CardTitle>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Total de Requisições</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalJobs.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              +{stats.jobsGrowth}% em relação ao mês passado
-            </p>
+            <p className="text-2xl font-bold">{stats.totalRequests}</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-7 lg:grid-cols-7">
-        <Overview className="col-span-4 shadow-sm" />
-        <RecentActivity className="col-span-3 shadow-sm" />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Vagas Recentes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {stats.recentJobs.map((job) => (
+              <div key={job.id} className="p-4 border rounded-lg">
+                <h3 className="font-medium">{job.title}</h3>
+                <p className="text-sm text-gray-600">
+                  {new Date(job.created_at || '').toLocaleDateString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-export const dynamic = 'force-dynamic'
-export const revalidate = routeConfig.revalidate 
+export const dynamic = 'force-dynamic' 

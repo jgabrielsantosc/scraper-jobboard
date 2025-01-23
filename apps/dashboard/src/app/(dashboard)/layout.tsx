@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sidebar } from "@/components/sidebar"
-import { Header } from "@/components/header"
-import { createClient } from "@/lib/supabase/client"
+import { browserClient } from '@/lib/supabase/client'
+import { Sidebar } from '@/components/sidebar'
+import { Header } from '@/components/header'
 
 export default function DashboardLayout({
   children,
@@ -13,58 +13,30 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const [isMounted, setIsMounted] = useState(false)
-  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (!isMounted) return
-
-    const checkAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (!session) {
-          router.push('/login')
-        }
-      } catch (error) {
-        console.error('Erro ao verificar autenticação:', error)
-        router.push('/login')
+    async function checkAuth() {
+      const { data: { session } } = await browserClient.auth.getSession()
+      if (!session) {
+        router.replace('/login')
+        return
       }
+      setIsMounted(true)
     }
 
     checkAuth()
-
-    // Adiciona listener para mudanças no estado de autenticação
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        router.push('/login')
-      } else if (event === 'SIGNED_IN') {
-        router.refresh()
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [isMounted, router, supabase.auth])
+  }, [router])
 
   if (!isMounted) {
-    return null // ou um loading state
+    return null // ou um loading spinner
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <div className="hidden h-full md:flex md:w-72 md:flex-col md:fixed md:inset-y-0">
-        <Sidebar />
-      </div>
-      <div className="md:pl-72">
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <div className="flex-1">
         <Header />
-        <main className="p-8 pt-6">
+        <main className="p-4">
           {children}
         </main>
       </div>
